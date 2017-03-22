@@ -7,7 +7,7 @@ library(tidyr)
 #subset to focal species
 specs= c("Aeropedellus clavatus","Chloealtis abdominalis","Camnula pellucida","Melanoplus dawsoni","Melanoplus boulderensis","Melanoplus sanguinipes")
 
-years= unique(hop$year)
+years= unique(na.omit(hop$year))
 sites= unique(hop$site)
 
 dat=hop
@@ -107,7 +107,12 @@ for(year in 1:length(years)){
 
 po1= melt(po, varnames=c("sp","year","site"))
 
+#add time period
+po1$period="initial"
+po1[which(po1$year>1960),"period"]<-"resurvey"
+
 #Change years for plotting ### FIX
+po1[which(po1$year==1958),"year"]= 1958+40
 po1[which(po1$year==1959),"year"]= 1959+40
 po1[which(po1$year==1960),"year"]= 1960+40
 
@@ -122,21 +127,38 @@ po1$sp2=po2$sp$X2
 hop.agg= aggregate(hop1, list(hop1$species),FUN=mean) #fix for hop1$site,
 hop.agg= hop.agg[order(hop.agg$ordinal),]
 
-### MAKE FACTOR
-###temp$size_f = factor(temp$size, levels=c('50%','100%','150%','200%'))
+#make species factor for plotting
+po1$sp1= factor(po1$sp1, levels=hop.agg$Group.1)
+po1$sp2= factor(po1$sp2, levels=hop.agg$Group.1)
 
 #plot
-ggplot(data=po1, aes(x=year, y = value, color=site ))+geom_point()+geom_line() +facet_grid(sp1~sp2, drop=TRUE)+theme_bw()
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\")
+pdf("PhenOverlap_byYear.pdf", height = 10, width = 10)
+ggplot(data=po1, aes(x=year, y = value, color=site ))+geom_point() +facet_grid(sp1~sp2, drop=TRUE)+theme_bw() #+geom_line()
+dev.off() 
 
 #--------
-#plot by temp
+#plot by temp and gdd
 clim1$siteyear= paste(clim1$Site, clim1$Year, sep="")
 po1$siteyear= paste(po1$site, po1$year, sep="")
 
 po1$Tmean=NA
+po1$cdd=NA
 match1= match(po1$siteyear, clim1$siteyear)
 matched= which(!is.na(match1))
 po1$Tmean[matched]<- clim1$mean[match1[matched]]  
+po1$cdd[matched]<- clim1$cdd[match1[matched]]
 
-#min ordinal date by temp
-ggplot(data=po1, aes(x=Tmean, y = value, color=site ))+geom_point()+geom_line()+facet_wrap(~sp, ncol=3) +theme_bw()
+#plot
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\")
+
+#overlap by temp
+pdf("PhenOverlap_byTemp.pdf", height = 10, width = 10)
+ggplot(data=po1, aes(x=Tmean, y = value, color=site, shape=period))+geom_point()+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()
+dev.off()
+
+#overlap by GDD
+pdf("PhenOverlap_byGDD.pdf", height = 10, width = 10)
+ggplot(data=po1, aes(x=cdd, y = value, color=site, shape=period))+geom_point()+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()
+dev.off()
+
