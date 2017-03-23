@@ -134,7 +134,7 @@ po1$sp2= factor(po1$sp2, levels=hop.agg$Group.1)
 #plot
 setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\")
 pdf("PhenOverlap_byYear.pdf", height = 10, width = 10)
-ggplot(data=po1, aes(x=year, y = value, color=site ))+geom_point() +facet_grid(sp1~sp2, drop=TRUE)+theme_bw() #+geom_line()
+ggplot(data=po1, aes(x=year, y = value, color=site ))+geom_point() +facet_grid(sp1~sp2, drop=TRUE)+theme_bw() #+geom_smooth(method=lm) #geom_line
 dev.off() 
 
 #--------
@@ -154,7 +154,7 @@ setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\fi
 
 #overlap by temp
 pdf("PhenOverlap_byTemp.pdf", height = 10, width = 10)
-ggplot(data=po1, aes(x=Tmean, y = value, color=site, shape=period))+geom_point()+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()
+ggplot(data=po1, aes(x=Tmean, y = value, color=site, shape=period))+geom_point()+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()#+geom_smooth(method=lm, se=FALSE)
 dev.off()
 
 #overlap by GDD

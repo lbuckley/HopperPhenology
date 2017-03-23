@@ -41,7 +41,7 @@ clim$dd[inds]= apply( clim[inds,c("Min","Max")], MARGIN=1, FUN=degree.days.mat, 
 clim$summer=NA
 clim[which(clim$Julian>59 & clim$Julian<244),"summer"]<-1
 #set degree days outside summer to 0
-clim["summer"==1,"dd"]=0
+clim[which(clim$summer!=1),"dd"]=0
 
 #cummulative degree days
 #cumsum within groups
@@ -100,10 +100,16 @@ clim1= clim[which(clim$Year %in% c(1959, 1960, 2006:2015))  ,]
 clim1[which(clim1$Year==1959),"Year"]= 1959+40
 clim1[which(clim1$Year==1960),"Year"]= 1960+40
 
+#set temp outside summer to NA
+clim1$Mean_summer= clim1$Mean
+clim1[is.na(clim1$summer),"Mean_summer"]=NA
+
 #metrics across years
+#clim1= ddply(clim1, c("Site", "Year"), summarise, mean = mean(Mean, na.rm=TRUE), sd = sd(Mean, na.rm=TRUE),cdd = max(cdd, na.rm=TRUE),  sem = sd(Mean, na.rm=TRUE)/sqrt(length(na.omit(Mean))))
+##summer only
 clim1= ddply(clim1, c("Site", "Year"), summarise,
-      mean = mean(Mean, na.rm=TRUE), sd = sd(Mean, na.rm=TRUE),cdd = max(cdd, na.rm=TRUE),
-      sem = sd(Mean, na.rm=TRUE)/sqrt(length(na.omit(Mean))))
+             mean = mean(Mean_summer, na.rm=TRUE), sd = sd(Mean_summer, na.rm=TRUE),cdd = max(cdd, na.rm=TRUE),
+             sem = sd(Mean_summer, na.rm=TRUE)/sqrt(length(na.omit(Mean_summer))))
 #better NA handling?
 
 #temp
@@ -132,6 +138,16 @@ hop2= ddply(hop1, c("site", "year","species","period"), summarise,
 hop2[which(hop2$year==1958),"year"]= 1958+40
 hop2[which(hop2$year==1959),"year"]= 1959+40
 hop2[which(hop2$year==1960),"year"]= 1960+40
+
+#order species by seasonal timing
+#ave phen
+#hop.el = hop1 %>% group_by(species,site) %>% arrange(species,site) %>% mutate(phen = mean(ordinal))
+hop.agg= aggregate(hop1, list(hop1$species),FUN=mean) #fix for hop1$site,
+hop.agg= hop.agg[order(hop.agg$ordinal),]
+
+#make species factor for plotting
+hop1$species= factor(hop1$species, levels=hop.agg$Group.1)
+hop2$species= factor(hop2$species, levels=hop.agg$Group.1)
 
 #min ordinal date
 ggplot(data=hop2, aes(x=year, y = min, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
