@@ -12,22 +12,12 @@ fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
 
 #load climate data
 setwd( paste(fdir, "climate", sep="") )   
+clim= read.csv("AlexanderClimateAll.csv")
 
-clim.a1= read.csv( "Climate_A1_1953-2014.csv" )
-clim.b1= read.csv( "Climate_B1_1953-2014.csv" )
-clim.c1= read.csv( "Climate_C1_1953-2014.csv" )
-clim.d1= read.csv( "Climate_D1_1953-2014.csv" )
-clim.noaa= read.csv( "Climate_noaa_1953-2014.csv" )
-
-#add site
-clim.a1$Site="A1"
-clim.b1$Site="B1"
-clim.c1$Site="C1"
-clim.d1$Site="D1"
-clim.noaa$Site="NOAA"
-
-#combine ##currently omits flags
-clim= rbind(clim.a1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean")], clim.b1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean")], clim.c1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean")], clim.d1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean")], clim.noaa[,c("Site","Date","Year","Month","Julian","Max","Min","Mean")])
+#Use NOAA for CHA
+clim$Site= as.character(clim$Site)
+clim[which(clim$Site=="NOAA"),"Site"]<-"CHA"
+clim$Site= as.factor(clim$Site)
 
 #------
 ## ADD GDD data
@@ -94,13 +84,15 @@ hop[which(hop$species=="Cratypedes neglectus"),"species"]="Cratypledes neglectus
 # temp, var, and GDD ~year by sites
 
 #subset years to survey
-clim1= clim[which(clim$Year %in% c(1959, 1960, 2006:2015))  ,]
+clim1= clim[which(clim$Year %in% c(1958, 1959, 1960, 2006:2015))  ,]
 
 #Change years for plotting ### FIX
+clim1[which(clim1$Year==1958),"Year"]= 1958+40
 clim1[which(clim1$Year==1959),"Year"]= 1959+40
 clim1[which(clim1$Year==1960),"Year"]= 1960+40
 
 #set temp outside summer to NA
+clim1$Mean= (clim1$Min + clim1$Max)/2
 clim1$Mean_summer= clim1$Mean
 clim1[is.na(clim1$summer),"Mean_summer"]=NA
 
@@ -108,16 +100,16 @@ clim1[is.na(clim1$summer),"Mean_summer"]=NA
 #clim1= ddply(clim1, c("Site", "Year"), summarise, mean = mean(Mean, na.rm=TRUE), sd = sd(Mean, na.rm=TRUE),cdd = max(cdd, na.rm=TRUE),  sem = sd(Mean, na.rm=TRUE)/sqrt(length(na.omit(Mean))))
 ##summer only
 clim1= ddply(clim1, c("Site", "Year"), summarise,
-             mean = mean(Mean_summer, na.rm=TRUE), sd = sd(Mean_summer, na.rm=TRUE),cdd = max(cdd, na.rm=TRUE),
-             sem = sd(Mean_summer, na.rm=TRUE)/sqrt(length(na.omit(Mean_summer))))
+             Mean = mean(Mean_summer, na.rm=TRUE), Sd = sd(Mean_summer, na.rm=TRUE),Cdd = max(cdd, na.rm=TRUE),
+             Sem = sd(Mean_summer, na.rm=TRUE)/sqrt(length(na.omit(Mean_summer))))
 #better NA handling?
 
 #temp
-ggplot(data=clim1, aes(x=Year, y = mean, color=Site ))+geom_point()+geom_line() +theme_bw()
+ggplot(data=clim1, aes(x=Year, y = Mean, color=Site ))+geom_point()+geom_line() +theme_bw()
 #sd
-ggplot(data=clim1, aes(x=Year, y = sd, color=Site ))+geom_point()+geom_line() +theme_bw()
+ggplot(data=clim1, aes(x=Year, y = Sd, color=Site ))+geom_point()+geom_line() +theme_bw()
 #cum dd
-ggplot(data=clim1, aes(x=Year, y = cdd, color=Site ))+geom_point()+geom_line() +theme_bw()
+ggplot(data=clim1, aes(x=Year, y = Cdd, color=Site ))+geom_point()+geom_line() +theme_bw()
 
 #---------
 # Jadult and GDDadult ~year by sites
@@ -182,15 +174,15 @@ hop2$Tmean=NA
 hop2$cdd=NA
 match1= match(hop2$siteyear, clim1$siteyear)
 matched= which(!is.na(match1))
-hop2$Tmean[matched]<- clim1$mean[match1[matched]]  
-hop2$cdd[matched]<- clim1$cdd[match1[matched]]  
+hop2$Tmean[matched]<- clim1$Mean[match1[matched]]  
+hop2$cdd[matched]<- clim1$Cdd[match1[matched]]  
 
 hop4$Tmean=NA
 hop4$cdd=NA
 match1= match(hop4$siteyear, clim1$siteyear)
 matched= which(!is.na(match1))
-hop4$Tmean[matched]<- clim1$mean[match1[matched]]  
-hop4$cdd[matched]<- clim1$cdd[match1[matched]]
+hop4$Tmean[matched]<- clim1$Mean[match1[matched]]  
+hop4$cdd[matched]<- clim1$Cdd[match1[matched]]
 
 #TEMP PLOTS
 #min ordinal date by temp
@@ -246,6 +238,6 @@ matched= which(!is.na(match1))
 hop2$mean.cdd[matched]<- clim$cdd[match1[matched]] 
 
 #gdd at 1st appearance
-ggplot(data=hop2, aes(x=year, y = min.cdd, color=species))+geom_point()+geom_line()+facet_grid(.~site) +theme_bw()
+ggplot(data=hop2, aes(x=year, y = min.cdd, color=species))+geom_point()+geom_line()+facet_grid(.~site) +theme_bw()+ theme(legend.position = "bottom")
 #gdd at peak
-ggplot(data=hop2, aes(x=year, y = mean.cdd, color=species))+geom_point()+geom_line()+facet_grid(.~site) +theme_bw()
+ggplot(data=hop2, aes(x=year, y = mean.cdd, color=species))+geom_point()+geom_line()+facet_grid(.~site) +theme_bw()+ theme(legend.position = "bottom")

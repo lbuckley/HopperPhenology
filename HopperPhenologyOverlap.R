@@ -146,8 +146,8 @@ po1$Tmean=NA
 po1$cdd=NA
 match1= match(po1$siteyear, clim1$siteyear)
 matched= which(!is.na(match1))
-po1$Tmean[matched]<- clim1$mean[match1[matched]]  
-po1$cdd[matched]<- clim1$cdd[match1[matched]]
+po1$Tmean[matched]<- clim1$Mean[match1[matched]]  
+po1$cdd[matched]<- clim1$Cdd[match1[matched]]
 
 #plot
 setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\")
