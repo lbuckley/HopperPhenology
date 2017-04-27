@@ -1,4 +1,4 @@
-#load libraries
+ #load libraries
 library(ggplot2)
 library(plyr)
 library(dplyr)
@@ -26,16 +26,46 @@ inds= which(!is.na(clim[,"Min"])& !is.na(clim[,"Max"]) )
 clim$dd=NA
 clim$dd[inds]= apply( clim[inds,c("Min","Max")], MARGIN=1, FUN=degree.days.mat, LDT=12 )  
 
-#restrict to March 1 to Aug 31, ordinal 60 - 243
-#code summer days
-clim$summer=NA
-clim[which(clim$Julian>59 & clim$Julian<244),"summer"]<-1
-#set degree days outside summer to 0
-clim[which(clim$summer!=1),"dd"]=0
+#-----------
+# Calculate additional DD metrics
+#Summer 60-243
+#June 152-181
+#July 182-212
+#Aug 213-243
+#Early 60-151
+#Mid 60-181
 
+clim$dd_sum=clim$dd
+clim[which(clim$Julian<60 | clim$Julian>243),"dd_sum"]<-0
+
+clim$dd_june=clim$dd
+clim[which(clim$Julian<152 | clim$Julian>181),"dd_june"]<-0
+
+clim$dd_july=clim$dd
+clim[which(clim$Julian<182 | clim$Julian>212),"dd_july"]<-0
+
+clim$dd_aug=clim$dd
+clim[which(clim$Julian<213 | clim$Julian>243),"dd_aug"]<-0
+
+clim$dd_early=clim$dd
+clim[which(clim$Julian<60 | clim$Julian>151),"dd_early"]<-0
+
+clim$dd_mid=clim$dd
+clim[which(clim$Julian<60 | clim$Julian>181),"dd_mid"]<-0
+
+#---------------------
+#species specific cdd: month before mean ordinal date
+clim$dd_ac=clim$dd
+clim[which(clim$Julian<(195-30) | clim$Julian>(195+30) ),"dd_ac"]<-0
+clim$dd_mb=clim$dd
+clim[which(clim$Julian<(208-30) | clim$Julian>(208+30) ),"dd_mb"]<-0
+clim$dd_ms=clim$dd
+clim[which(clim$Julian<(224-30) | clim$Julian>(224+30) ),"dd_ms"]<-0
+
+#---------------------
 #cummulative degree days
 #cumsum within groups
-clim = clim %>% group_by(Year,Site) %>% arrange(Julian) %>% mutate(cdd = cumsum(dd)) 
+clim = clim %>% group_by(Year,Site) %>% arrange(Julian) %>% mutate(cdd_sum = cumsum(dd_sum),cdd_june = cumsum(dd_june),cdd_july = cumsum(dd_july),cdd_aug = cumsum(dd_aug),cdd_early = cumsum(dd_early),cdd_mid = cumsum(dd_mid) ) 
 #need to deal with NAs?
 
 #---------------------
@@ -94,13 +124,11 @@ clim1[which(clim1$Year==1960),"Year"]= 1960+40
 #set temp outside summer to NA
 clim1$Mean= (clim1$Min + clim1$Max)/2
 clim1$Mean_summer= clim1$Mean
-clim1[is.na(clim1$summer),"Mean_summer"]=NA
+clim1[clim1$Julian<60 | clim1$Julian>243,"Mean_summer"]=NA
 
 #metrics across years
-#clim1= ddply(clim1, c("Site", "Year"), summarise, mean = mean(Mean, na.rm=TRUE), sd = sd(Mean, na.rm=TRUE),cdd = max(cdd, na.rm=TRUE),  sem = sd(Mean, na.rm=TRUE)/sqrt(length(na.omit(Mean))))
-##summer only
 clim1= ddply(clim1, c("Site", "Year"), summarise,
-             Mean = mean(Mean_summer, na.rm=TRUE), Sd = sd(Mean_summer, na.rm=TRUE),Cdd = max(cdd, na.rm=TRUE),
+             Mean = mean(Mean_summer, na.rm=TRUE), Sd = sd(Mean_summer, na.rm=TRUE),Cdd_sum = max(cdd_sum, na.rm=TRUE),Cdd_june = max(cdd_june, na.rm=TRUE),Cdd_july = max(cdd_july, na.rm=TRUE),Cdd_aug = max(cdd_aug, na.rm=TRUE),Cdd_early = max(cdd_early, na.rm=TRUE),Cdd_mid = max(cdd_mid, na.rm=TRUE),
              Sem = sd(Mean_summer, na.rm=TRUE)/sqrt(length(na.omit(Mean_summer))))
 #better NA handling?
 
@@ -109,7 +137,13 @@ ggplot(data=clim1, aes(x=Year, y = Mean, color=Site ))+geom_point()+geom_line() 
 #sd
 ggplot(data=clim1, aes(x=Year, y = Sd, color=Site ))+geom_point()+geom_line() +theme_bw()
 #cum dd
-ggplot(data=clim1, aes(x=Year, y = Cdd, color=Site ))+geom_point()+geom_line() +theme_bw()
+ggplot(data=clim1, aes(x=Year, y = Cdd_sum, color=Site ))+geom_point()+geom_line() +theme_bw()
+ggplot(data=clim1, aes(x=Year, y = Cdd_june, color=Site ))+geom_point()+geom_line() +theme_bw()
+ggplot(data=clim1, aes(x=Year, y = Cdd_july, color=Site ))+geom_point()+geom_line() +theme_bw()
+ggplot(data=clim1, aes(x=Year, y = Cdd_aug, color=Site ))+geom_point()+geom_line() +theme_bw()
+ggplot(data=clim1, aes(x=Year, y = Cdd_early, color=Site ))+geom_point()+geom_line() +theme_bw()
+ggplot(data=clim1, aes(x=Year, y = Cdd_mid, color=Site ))+geom_point()+geom_line() +theme_bw()
+
 
 #---------
 # Jadult and GDDadult ~year by sites
@@ -171,18 +205,72 @@ hop2$siteyear= paste(hop2$site, hop2$year, sep="")
 hop4$siteyear= paste(hop4$site, hop4$year, sep="")
 
 hop2$Tmean=NA
-hop2$cdd=NA
 match1= match(hop2$siteyear, clim1$siteyear)
 matched= which(!is.na(match1))
 hop2$Tmean[matched]<- clim1$Mean[match1[matched]]  
-hop2$cdd[matched]<- clim1$Cdd[match1[matched]]  
 
+hop2$cdd_sum=NA
+hop2$cdd_sum[matched]<- clim1$Cdd_sum[match1[matched]]  
+hop2$cdd_june=NA
+hop2$cdd_june[matched]<- clim1$Cdd_june[match1[matched]] 
+hop2$cdd_july=NA
+hop2$cdd_july[matched]<- clim1$Cdd_july[match1[matched]] 
+hop2$cdd_aug=NA
+hop2$cdd_aug[matched]<- clim1$Cdd_aug[match1[matched]] 
+hop2$cdd_early=NA
+hop2$cdd_early[matched]<- clim1$Cdd_early[match1[matched]] 
+hop2$cdd_mid=NA
+hop2$cdd_mid[matched]<- clim1$Cdd_mid[match1[matched]] 
+
+#--------------------------
+#Calculate cdd in month before mean ordinal date
+
+hop2$cdd_ss=NA
+hop2$cdd_ss[matched]<- clim1$Cdd_ms[match1[matched]] 
+
+#clav
+inds= which(hop2$species=="Aeropedellus clavatus")
+hop2$cdd_ss[matched[inds]]<- clim1$Cdd_ac[match1[matched[inds]]] 
+
+#bould
+inds= which(hop2$species=="Melanoplus boulderensis")
+hop2$cdd_ss[matched[inds]]<- clim1$Cdd_mb[match1[matched[inds]]] 
+
+#----------------------------------------------
 hop4$Tmean=NA
-hop4$cdd=NA
 match1= match(hop4$siteyear, clim1$siteyear)
 matched= which(!is.na(match1))
 hop4$Tmean[matched]<- clim1$Mean[match1[matched]]  
-hop4$cdd[matched]<- clim1$Cdd[match1[matched]]
+
+hop4$cdd_sum=NA
+hop4$cdd_sum[matched]<- clim1$Cdd_sum[match1[matched]]  
+hop4$cdd_june=NA
+hop4$cdd_june[matched]<- clim1$Cdd_june[match1[matched]] 
+hop4$cdd_july=NA
+hop4$cdd_july[matched]<- clim1$Cdd_july[match1[matched]] 
+hop4$cdd_aug=NA
+hop4$cdd_aug[matched]<- clim1$Cdd_aug[match1[matched]] 
+hop4$cdd_early=NA
+hop4$cdd_early[matched]<- clim1$Cdd_early[match1[matched]] 
+hop4$cdd_mid=NA
+hop4$cdd_mid[matched]<- clim1$Cdd_mid[match1[matched]] 
+
+#--------------------------
+#Calculate cdd in month before mean ordinal date
+
+hop4$cdd_ss=NA
+hop4$cdd_ss[matched]<- clim1$Cdd_ms[match1[matched]] 
+
+#clav
+inds= which(hop4$species=="Aeropedellus clavatus")
+hop4$cdd_ss[matched[inds]]<- clim1$Cdd_ac[match1[matched[inds]]] 
+
+#bould
+inds= which(hop4$species=="Melanoplus boulderensis")
+hop4$cdd_ss[matched[inds]]<- clim1$Cdd_mb[match1[matched[inds]]] 
+## FIX *****
+
+#----------------------------------------------
 
 #TEMP PLOTS
 #min ordinal date by temp
@@ -195,6 +283,17 @@ ggplot(data=hop4, aes(x=Tmean, y = ordinal, color=site,shape=period))+geom_point
 
 #------------------
 #GDD PLOTS
+
+##Specify cdd metric
+hop2$cdd=NA; hop4$cdd=NA
+hop2$cdd=hop2$cdd_sum; hop4$cdd=hop4$cdd_sum
+hop2$cdd=hop2$cdd_june; hop4$cdd=hop4$cdd_june
+hop2$cdd=hop2$cdd_july; hop4$cdd=hop4$cdd_july
+hop2$cdd=hop2$cdd_aug; hop4$cdd=hop4$cdd_aug
+hop2$cdd=hop2$cdd_early; hop4$cdd=hop4$cdd_early
+hop2$cdd=hop2$cdd_mid; hop4$cdd=hop4$cdd_mid
+hop2$cdd=hop2$cdd_ss; hop4$cdd=hop4$cdd_ss
+
 #min ordinal date by dd
 ggplot(data=hop2, aes(x=cdd, y = min, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
 #mean ordinal date by dd
