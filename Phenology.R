@@ -65,7 +65,7 @@ clim[which(clim$Julian<(224-30) | clim$Julian>(224+30) ),"dd_ms"]<-0
 #---------------------
 #cummulative degree days
 #cumsum within groups
-clim = clim %>% group_by(Year,Site) %>% arrange(Julian) %>% mutate(cdd_sum = cumsum(dd_sum),cdd_june = cumsum(dd_june),cdd_july = cumsum(dd_july),cdd_aug = cumsum(dd_aug),cdd_early = cumsum(dd_early),cdd_mid = cumsum(dd_mid) ) 
+clim = clim %>% group_by(Year,Site) %>% arrange(Julian) %>% mutate(cdd_sum = cumsum(dd_sum),cdd_june = cumsum(dd_june),cdd_july = cumsum(dd_july),cdd_aug = cumsum(dd_aug),cdd_early = cumsum(dd_early),cdd_mid = cumsum(dd_mid),cdd_ac = cumsum(dd_ac),cdd_mb = cumsum(dd_mb),cdd_ms = cumsum(dd_ms) ) 
 #need to deal with NAs?
 
 #---------------------
@@ -128,8 +128,7 @@ clim1[clim1$Julian<60 | clim1$Julian>243,"Mean_summer"]=NA
 
 #metrics across years
 clim1= ddply(clim1, c("Site", "Year"), summarise,
-             Mean = mean(Mean_summer, na.rm=TRUE), Sd = sd(Mean_summer, na.rm=TRUE),Cdd_sum = max(cdd_sum, na.rm=TRUE),Cdd_june = max(cdd_june, na.rm=TRUE),Cdd_july = max(cdd_july, na.rm=TRUE),Cdd_aug = max(cdd_aug, na.rm=TRUE),Cdd_early = max(cdd_early, na.rm=TRUE),Cdd_mid = max(cdd_mid, na.rm=TRUE),
-             Sem = sd(Mean_summer, na.rm=TRUE)/sqrt(length(na.omit(Mean_summer))))
+             Mean = mean(Mean_summer, na.rm=TRUE), Sd = sd(Mean_summer, na.rm=TRUE),Cdd_sum = max(cdd_sum, na.rm=TRUE),Cdd_june = max(cdd_june, na.rm=TRUE),Cdd_july = max(cdd_july, na.rm=TRUE),Cdd_aug = max(cdd_aug, na.rm=TRUE),Cdd_early = max(cdd_early, na.rm=TRUE),Cdd_mid = max(cdd_mid, na.rm=TRUE),Cdd_ac = max(cdd_ac, na.rm=TRUE),Cdd_mb = max(cdd_mb, na.rm=TRUE),Cdd_ms = max(cdd_ms, na.rm=TRUE), Sem = sd(Mean_summer, na.rm=TRUE)/sqrt(length(na.omit(Mean_summer))))
 #better NA handling?
 
 #temp
@@ -143,7 +142,9 @@ ggplot(data=clim1, aes(x=Year, y = Cdd_july, color=Site ))+geom_point()+geom_lin
 ggplot(data=clim1, aes(x=Year, y = Cdd_aug, color=Site ))+geom_point()+geom_line() +theme_bw()
 ggplot(data=clim1, aes(x=Year, y = Cdd_early, color=Site ))+geom_point()+geom_line() +theme_bw()
 ggplot(data=clim1, aes(x=Year, y = Cdd_mid, color=Site ))+geom_point()+geom_line() +theme_bw()
-
+ggplot(data=clim1, aes(x=Year, y = Cdd_ac, color=Site ))+geom_point()+geom_line() +theme_bw()
+ggplot(data=clim1, aes(x=Year, y = Cdd_mb, color=Site ))+geom_point()+geom_line() +theme_bw()
+ggplot(data=clim1, aes(x=Year, y = Cdd_ms, color=Site ))+geom_point()+geom_line() +theme_bw()
 
 #---------
 # Jadult and GDDadult ~year by sites
@@ -229,11 +230,11 @@ hop2$cdd_ss=NA
 hop2$cdd_ss[matched]<- clim1$Cdd_ms[match1[matched]] 
 
 #clav
-inds= which(hop2$species=="Aeropedellus clavatus")
+inds= which(hop2$species[matched]=="Aeropedellus clavatus")
 hop2$cdd_ss[matched[inds]]<- clim1$Cdd_ac[match1[matched[inds]]] 
 
 #bould
-inds= which(hop2$species=="Melanoplus boulderensis")
+inds= which(hop2$species[matched]=="Melanoplus boulderensis")
 hop2$cdd_ss[matched[inds]]<- clim1$Cdd_mb[match1[matched[inds]]] 
 
 #----------------------------------------------
@@ -262,13 +263,12 @@ hop4$cdd_ss=NA
 hop4$cdd_ss[matched]<- clim1$Cdd_ms[match1[matched]] 
 
 #clav
-inds= which(hop4$species=="Aeropedellus clavatus")
+inds= which(hop4$species[matched]=="Aeropedellus clavatus")
 hop4$cdd_ss[matched[inds]]<- clim1$Cdd_ac[match1[matched[inds]]] 
 
 #bould
-inds= which(hop4$species=="Melanoplus boulderensis")
+inds= which(hop4$species[matched]=="Melanoplus boulderensis")
 hop4$cdd_ss[matched[inds]]<- clim1$Cdd_mb[match1[matched[inds]]] 
-## FIX *****
 
 #----------------------------------------------
 
@@ -300,6 +300,10 @@ ggplot(data=hop2, aes(x=cdd, y = min, color=site, shape=period))+geom_point()+ge
 ggplot(data=hop2, aes(x=cdd, y = mean, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
 #median individual ordinal by dd
 ggplot(data=hop4, aes(x=cdd, y = ordinal, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
+
+#min ordinal date by dd, #plot regression
+ggplot(data=hop2, aes(x=cdd, y = min, color=site))+geom_point(aes(shape=period, fill=period), size=3)+facet_wrap(~species, ncol=3) +theme_bw()+geom_smooth(method="lm")+ylim(125,250)
+# , shape=period
 
 #====================================
 #ADDITIONAL GDD PLOTS
