@@ -101,6 +101,9 @@ for(year in 1:length(years)){
   } #end loop year
 } #end loop sites
 
+#replace 0 values with NA
+po[po==0]=NA
+
 #-----------------------------------
 #PLOTS
 # PO: sp comb x years x sites
@@ -128,8 +131,10 @@ hop.agg= aggregate(hop1, list(hop1$species),FUN=mean) #fix for hop1$site,
 hop.agg= hop.agg[order(hop.agg$ordinal),]
 
 #make species factor for plotting
-po1$sp1= factor(po1$sp1, levels=hop.agg$Group.1)
-po1$sp2= factor(po1$sp2, levels=hop.agg$Group.1)
+#po1$sp1= factor(po1$sp1, levels=hop.agg$Group.1)
+#po1$sp2= factor(po1$sp2, levels=hop.agg$Group.1)
+po1$sp1= factor(po1$sp1, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes", "Melanoplus dawsoni", "Chloealtis abdominalis"))
+po1$sp2= factor(po1$sp2, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes", "Melanoplus dawsoni", "Chloealtis abdominalis"))
 
 #plot
 setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\")
@@ -142,12 +147,26 @@ dev.off()
 clim1$siteyear= paste(clim1$Site, clim1$Year, sep="")
 po1$siteyear= paste(po1$site, po1$year, sep="")
 
+#select cdd metric
+#clim1$Cdd=  clim1$Cdd_sum
+#clim1$Cdd=  clim1$Cdd_june
+clim1$Cdd=  clim1$Cdd_july
+#clim1$Cdd=  clim1$Cdd_aug
+#clim1$Cdd=  clim1$Cdd_early
+#clim1$Cdd=  clim1$Cdd_mid
+
 po1$Tmean=NA
 po1$cdd=NA
 match1= match(po1$siteyear, clim1$siteyear)
 matched= which(!is.na(match1))
 po1$Tmean[matched]<- clim1$Mean[match1[matched]]  
 po1$cdd[matched]<- clim1$Cdd[match1[matched]]
+
+#focus on sites B1 and C1 for now
+po2= po1[which(po1$site %in% c("B1", "C1")) ,]
+
+#drop due to missing climate data?
+po2= po2[-which(po2$siteyear %in% c("C12013")) ,] #,"B12009"
 
 #plot
 setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\")
@@ -157,8 +176,12 @@ pdf("PhenOverlap_byTemp.pdf", height = 10, width = 10)
 ggplot(data=po1, aes(x=Tmean, y = value, color=site, shape=period))+geom_point()+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()#+geom_smooth(method=lm, se=FALSE)
 dev.off()
 
+#add elevation
+po2$elevation= as.factor(elevs[match(po2$site, sites)])
+
 #overlap by GDD
-pdf("PhenOverlap_byGDD.pdf", height = 10, width = 10)
-ggplot(data=po1, aes(x=cdd, y = value, color=site, shape=period))+geom_point()+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()
+pdf("PhenOverlap_byGDD.pdf", height = 8, width = 10)
+ggplot(data=po2, aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=3)+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm")+ylim(0,1)+ylab("Phenological overlap")+xlab("Growing degree days")+ scale_color_manual(values=c("darkorange", "blue"))
 dev.off()
+
 

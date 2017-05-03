@@ -173,8 +173,10 @@ hop.agg= aggregate(hop1, list(hop1$species),FUN=mean) #fix for hop1$site,
 hop.agg= hop.agg[order(hop.agg$ordinal),]
 
 #make species factor for plotting
-hop1$species= factor(hop1$species, levels=hop.agg$Group.1)
-hop2$species= factor(hop2$species, levels=hop.agg$Group.1)
+#hop1$species= factor(hop1$species, levels=hop.agg$Group.1)
+#hop2$species= factor(hop2$species, levels=hop.agg$Group.1)
+hop1$species= factor(hop1$species, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes", "Melanoplus dawsoni", "Chloealtis abdominalis"))
+hop2$species= factor(hop2$species, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes", "Melanoplus dawsoni", "Chloealtis abdominalis"))
 
 #min ordinal date
 ggplot(data=hop2, aes(x=year, y = min, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
@@ -301,9 +303,23 @@ ggplot(data=hop2, aes(x=cdd, y = mean, color=site, shape=period))+geom_point()+g
 #median individual ordinal by dd
 ggplot(data=hop4, aes(x=cdd, y = ordinal, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
 
+
+#focus on sites B1 and C1 for now
+hop3= hop2[which(hop2$site %in% c("B1", "C1", "CHA")) ,]
+
+#drop due to missing climate data?
+hop3= hop3[-which(hop3$siteyear %in% c("C12013","B12009")) ,] #
+
+#add elevation
+hop3$elevation= as.factor(elevs[match(hop3$site, sites)])
+
+#plot
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\")
+
 #min ordinal date by dd, #plot regression
-ggplot(data=hop2, aes(x=cdd, y = min, color=site))+geom_point(aes(shape=period, fill=period), size=3)+facet_wrap(~species, ncol=3) +theme_bw()+geom_smooth(method="lm")+ylim(125,250)
-# , shape=period
+pdf("Phen_byGDD.pdf", height = 7, width = 10)
+ggplot(data=hop3, aes(x=cdd, y = min, color=elevation))+geom_point(aes(shape=period, fill=period), size=3)+facet_wrap(~species, ncol=3) +theme_bw()+geom_smooth(method="lm")+ylim(125,250)+ylab("First appearance date")+xlab("Growing degree days")+ scale_color_manual(values=c("darkgreen","darkorange", "blue"))
+dev.off()
 
 #====================================
 #ADDITIONAL GDD PLOTS
