@@ -17,7 +17,7 @@ dat=hop
 sp.combs= combn(sites, 2)
 
 #set up data storage
-po= array(data = 0, dim = c(length(sp.combs[1,]), length(years), length(specs)) )
+po= array(data = NA, dim = c(length(sp.combs[1,]), length(years), length(specs)) )
 
 #combine species combinations names
 sp.combs.n= paste(sp.combs[1,],sp.combs[2,],sep="_")
@@ -142,6 +142,10 @@ po1$Tmean1=NA
 po1$cdd1=NA
 po1$Tmean2=NA
 po1$cdd2=NA
+
+#select cdd metric
+clim1$Cdd=  clim1$Cdd_july
+
 match1= match(po1$siteyear1, clim1$siteyear)
 matched= which(!is.na(match1))
 po1$Tmean1[matched]<- clim1$Mean[match1[matched]]  
@@ -168,8 +172,12 @@ ggplot(data=po1, aes(x=cdd, y = value, color=sp, shape=period))+geom_point()+fac
 dev.off()
 
 #---------------------------------------------
-#Plot Season by species
+#Analyze by species
 
+#check first and last sampling dates across sites
+seas.samp= ddply(hop1, .(site,year), summarize, first=min(ordinal,na.rm=TRUE), last=max(ordinal,na.rm=TRUE) )
+
+#Plot Season by species
 #Elev for A1  B1  C1  CHA
 elevs= c(2195, 2591, 3048, 1752)
 
@@ -208,10 +216,6 @@ dev.off()
 seas$sp.si= paste(seas$species,seas$site,sep="_")
 
 seas %>% group_by(species, year) %>% summarise( min   )
-
-testData %>%
-  group_by(Y) %>%
-  summarise(total = sum(income),freq = n())
 
 #=============================
 

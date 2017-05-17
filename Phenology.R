@@ -1,4 +1,4 @@
- #load libraries
+#load libraries
 library(ggplot2)
 library(plyr)
 library(dplyr)
@@ -77,6 +77,12 @@ hop.c1= read.csv( "C1_1959-2015_eggDiapause.csv" )
 hop.cha= read.csv( "CHA_1959-2012_eggDiapause.csv" )
 #add old a1 data
 hop.a1= read.csv( "A1data_old.csv" )
+
+#update A1 data
+hop.a1.up= read.csv( "A1_1958-2011_allSpecies.csv" ) 
+#combine for now across sex and subsite
+hop.a1.up2= ddply(hop.a1.up, .(species,year,ordinal), summarize, date=date[1], GDDs= GDDs[1], in6= sum(in6),in5= sum(in5),in4= sum(in4),in3= sum(in3),in2= sum(in2),in1= sum(in1),total= sum(total), month=month[1], day=day[1], site=site[1] )
+hop.a1= hop.a1.up2[,c("date","ordinal","GDDs","species","in6","in5","in4","in3","in2","in1","total","month","day","year","site")]                  
 
 #add site
 hop.b1$site="B1"
