@@ -3,6 +3,9 @@ library(ggplot2)
 library(plyr)
 library(dplyr)
 
+sites= c("Redfox", "A1", "B1", "C1", "D1")  
+elevs= c(1574, 2195, 2591, 3048, 3739)
+
 #source degree days function
 setwd("C:\\Users\\Buckley\\Documents\\HopperPhenology\\")
 source("degreedays.R")
@@ -112,6 +115,8 @@ hop[which(hop$species=="Melanoplus bouderensis"),"species"]="Melanoplus bouldere
 hop[which(hop$species=="Melanoplus dodgei"),"species"]="Melanoplus boulderensis"
 hop[which(hop$species=="Melanoplus bivitattus"),"species"]="Melanoplus bivittatus"
 hop[which(hop$species=="Cratypedes neglectus"),"species"]="Cratypledes neglectus"
+#replace _ with space
+hop$species=gsub("_"," ", hop$species)
 
 #--------------------------------------
 #ANALYSIS
