@@ -184,4 +184,13 @@ pdf("PhenOverlap_byGDD.pdf", height = 8, width = 10)
 ggplot(data=po2, aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=3)+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm")+ylim(0,1)+ylab("Phenological overlap")+xlab("Growing degree days")+ scale_color_manual(values=c("darkorange", "blue"))
 dev.off()
 
+#===================================
+# STATS GROUP BY SPECIES
+mod1= lm(value~ cdd*elevation+sp2+sp1, data=po2)
+
+po3= subset(po2, po2$sp1=="Aeropedellus clavatus")
+po3= subset(po2, po2$sp1=="Melanoplus boulderensis")
+mod1= lm(value~ cdd*elevation+sp2+sp1, data=po3)
+
+
 
