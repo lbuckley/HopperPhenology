@@ -187,10 +187,54 @@ dev.off()
 #===================================
 # STATS GROUP BY SPECIES
 mod1= lm(value~ cdd*elevation+sp2+sp1, data=po2)
+mod1= lm(value~ cdd*elevation+sp, data=po2)
 
 po3= subset(po2, po2$sp1=="Aeropedellus clavatus")
 po3= subset(po2, po2$sp1=="Melanoplus boulderensis")
-mod1= lm(value~ cdd*elevation+sp2+sp1, data=po3)
+mod1= lm(value~ cdd*elevation, data=po3)
 
+#--------------------------------
+#significant trends by species
+#Code from Stuart
+
+finalDat=po2
+
+# Create results storage
+modelOutput <- array(NA, dim = c(length(unique(finalDat$sp)), 4, length(sites)))
+colnames(modelOutput) <- c("slope", "SE", "tvalue", "pvalue")
+
+coms= unique(finalDat$sp)
+
+for(site in 1:length(sites)){
+  for(com in 1:length(unique(finalDat$sp))){
+    
+    # Subset to 1 site and 1 species combination
+    dat <- finalDat[finalDat$site == sites[site] & finalDat$sp == coms[com],]
+    
+    # Remove year 2009 for B1
+    if(sites[site] == "B1"){
+      dat <- dat[dat$year != 2009,]
+    }
+    
+    # Only try to create model if data exists
+    if(sum(!is.na(dat$value)) > 0){
+      # Create linear model
+      mod <- lm(value ~ cdd, data = dat)
+      
+      # Extract coefficients table
+      modelOutput[com,,site] <- summary(mod)[["coefficients"]][2,]
+    }
+  }
+}
+
+# Combine all output in a data frame
+combIDs <- finalDat[match(sort(unique(finalDat$sp)), finalDat$sp), c("sp", "sp1", "sp2")]
+coefs <- rbind(modelOutput[,,1], modelOutput[,,2], modelOutput[,,3], modelOutput[,,4])
+IDs <- rbind(combIDs, combIDs, combIDs, combIDs)
+modelResults <- cbind(IDs, coefs)
+modelResults$site <- rep(sites, each = 15)
+
+# View marginally significant results
+View(modelResults[!is.na(modelResults$pvalue) & modelResults$pvalue < 0.1,])
 
 

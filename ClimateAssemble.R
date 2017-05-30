@@ -168,7 +168,7 @@ ggplot(data=clim2, aes(x=Year, y = Min, color=Site ))+geom_line() +theme_bw()
 #=====================================
 # WRITE OUT DATA
 setwd( paste(fdir, "climate", sep="") )   
-write.csv(clim1, "AlexanderClimateAll.csv")
+#write.csv(clim1, "AlexanderClimateAll.csv")
 
 #check counts of data
 years= c(1958:1960, 2006:2015)
@@ -177,4 +177,65 @@ climsub=clim1[clim1$Year %in% years,]
 #counts across sites years
 climsub= climsub %>% group_by(Site,Year) %>% summarise(Min= length(na.omit(Min)),Max= length(na.omit(Max)),Mean= length(na.omit(Mean)) )
 climsub= as.data.frame(climsub)
+
+#-------------------------------
+#CHECK AND INTERPOLATE CLIMATE DATA
+
+setwd( paste(fdir, "climate", sep="") )   
+clim1= read.csv("AlexanderClimateAll.csv")
+#$$$$$$$$$$$$$$$ all
+
+# Subset climate data to sites and years for which we have grasshopper data
+sites <- c("B1", "C1", "NOAA")
+years <- c(1959, 1960, 2006:2015)
+allClim <- droplevels(allClim[allClim$Site %in% sites & allClim$Year %in% years,])
+
+# Subset to ordinal dates relevant for grasshopper season (March 1 to Aug 31 = ordinal 60 to 243)
+allClim <- allClim[allClim$Julian > 59 & allClim$Julian < 244,]
+
+# Check that all ordinal dates are included in the climate data
+ords <- 60:243
+results <- matrix(NA, nrow = length(sites), ncol = length(years))
+rownames(results) <- sites
+colnames(results) <- years
+for(i in 1:length(sites)){
+  for(j in 1:length(years)){
+    clim <- allClim[allClim$Site == sites[i] & allClim$Year == years[j],]
+    results[i,j] <- sum(ords %in% clim$Julian)/length(ords)
+  }
+}
+
+# No climate data for C1 or NOAA (CHA) in 2015. Otherwise all ordinal dates are 
+# present for all sites in all years
+
+# Calculate GDDs accumulated on each day
+clim <- allClim[!is.na(allClim$Min) & !is.na(allClim$Max),]
+clim$dd <- apply(clim[,c("Min","Max")], MARGIN = 1, FUN = degree.days.mat, 
+                 LDT= 12)
+allClim <- merge(allClim, clim, all.x = T)
+
+# Check dates for which GDDs could not be calculated
+allClim[is.na(allClim$dd),]
+
+# Longest run of days without GDDs is 3. Interpolation should not lead to
+# major errors
+
+# Re-order allClim
+allClim <- allClim[order(allClim$Site, allClim$Year, allClim$Julian),]
+
+# Obtain rows which need to be interpolated
+x <- which(is.na(allClim$dd))
+
+# Interpolate data
+allClim$order <- 1:nrow(allClim)
+allClim$dd <- na.approx(allClim$dd, allClim$order, na.rm = F)
+
+# Check interpolation
+allClim[x,]
+
+# Mistake for B1 2012 ordinal 60 because the interpolation is done between the
+# last day of 2011 and the second day of 2012. Change this value to zero manually
+allClim[x[1],"dd"] <- 0
+
+
 
