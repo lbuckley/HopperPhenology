@@ -2,6 +2,7 @@
 library(ggplot2)
 library(plyr)
 library(dplyr)
+library(zoo)
 
 #source degree days function
 setwd("C:\\Users\\Buckley\\Documents\\HopperPhenology\\")
@@ -183,59 +184,114 @@ climsub= as.data.frame(climsub)
 
 setwd( paste(fdir, "climate", sep="") )   
 clim1= read.csv("AlexanderClimateAll.csv")
-#$$$$$$$$$$$$$$$ all
 
 # Subset climate data to sites and years for which we have grasshopper data
-sites <- c("B1", "C1", "NOAA")
-years <- c(1959, 1960, 2006:2015)
-allClim <- droplevels(allClim[allClim$Site %in% sites & allClim$Year %in% years,])
+sites <- c("A1", "B1", "C1", "NOAA")
+years <- c(1958:1960, 2006:2015)
+allClim <- droplevels(clim1[clim1$Site %in% sites & clim1$Year %in% years,])
 
 # Subset to ordinal dates relevant for grasshopper season (March 1 to Aug 31 = ordinal 60 to 243)
 allClim <- allClim[allClim$Julian > 59 & allClim$Julian < 244,]
 
-# Check that all ordinal dates are included in the climate data
-ords <- 60:243
-results <- matrix(NA, nrow = length(sites), ncol = length(years))
-rownames(results) <- sites
-colnames(results) <- years
-for(i in 1:length(sites)){
-  for(j in 1:length(years)){
-    clim <- allClim[allClim$Site == sites[i] & allClim$Year == years[j],]
-    results[i,j] <- sum(ords %in% clim$Julian)/length(ords)
-  }
-}
+#set up data frame with all combinations
+clim1 = expand.grid(Site=sites, Julian = 60:243, Year = years)
+#set up columns
+clim1$Max=NA; clim1$Min=NA; clim1$Mean=NA
+#columns for matching
+clim1$sjy= paste(clim1$Site, clim1$Julian, clim1$Year, sep="_")
+allClim$sjy= paste(allClim$Site, allClim$Julian, allClim$Year, sep="_")
+#match
+match1= match(clim1$sjy,allClim$sjy)
+matched= which(!is.na(match1))
 
-# No climate data for C1 or NOAA (CHA) in 2015. Otherwise all ordinal dates are 
-# present for all sites in all years
+clim1[matched,c("Site","Julian","Year","Max","Min","Mean")]= allClim[match1[matched], c("Site","Julian","Year","Max","Min","Mean")]
+# Re-order Climate data
+clim1 <- clim1[order(clim1$Site, clim1$Year, clim1$Julian),]
 
-# Calculate GDDs accumulated on each day
-clim <- allClim[!is.na(allClim$Min) & !is.na(allClim$Max),]
-clim$dd <- apply(clim[,c("Min","Max")], MARGIN = 1, FUN = degree.days.mat, 
-                 LDT= 12)
-allClim <- merge(allClim, clim, all.x = T)
-
-# Check dates for which GDDs could not be calculated
-allClim[is.na(allClim$dd),]
-
-# Longest run of days without GDDs is 3. Interpolation should not lead to
-# major errors
-
-# Re-order allClim
-allClim <- allClim[order(allClim$Site, allClim$Year, allClim$Julian),]
-
-# Obtain rows which need to be interpolated
-x <- which(is.na(allClim$dd))
+clim.nas= clim1[(is.na(clim1$Min) | is.na(clim1$Max)),] 
+clim.nas$Year= as.factor(clim.nas$Year)
+#counts by sites, years
+clim.nas2= clim.nas %>% group_by(Site, Year) %>% summarise(count=length(Julian) )
 
 # Interpolate data
-allClim$order <- 1:nrow(allClim)
-allClim$dd <- na.approx(allClim$dd, allClim$order, na.rm = F)
+inds= which(clim1$Site=="B1"&clim1$Year=="2012")
+clim1$Min[inds] <- na.approx(clim1$Min[inds], na.rm = F, maxgap=5)
+clim1$Max[inds] <- na.approx(clim1$Max[inds], na.rm = F, maxgap=5)
+#approx first value
+clim1$Min[inds[1]]= clim1$Min[inds[2]]
+clim1$Max[inds[1]]= clim1$Max[inds[2]]
+#-------
+inds= which(clim1$Site=="C1"&clim1$Year=="2013")
+clim1$Min[inds] <- na.approx(clim1$Min[inds], na.rm = F, maxgap=5)
+clim1$Max[inds] <- na.approx(clim1$Max[inds], na.rm = F, maxgap=5)
 
-# Check interpolation
-allClim[x,]
+#--------------------
+#Add degree days
+clim= clim1
 
-# Mistake for B1 2012 ordinal 60 because the interpolation is done between the
-# last day of 2011 and the second day of 2012. Change this value to zero manually
-allClim[x[1],"dd"] <- 0
+#Use NOAA for CHA
+clim$Site= as.character(clim$Site)
+clim[which(clim$Site=="NOAA"),"Site"]<-"CHA"
+clim$Site= as.factor(clim$Site)
 
+#--------------------------------
+## ADD GDD data
+dd= degree.days.mat(cbind(clim$Min, clim$Max),LDT=12)
+inds= which(!is.na(clim[,"Min"])& !is.na(clim[,"Max"]) )
+clim$dd=NA
+clim$dd[inds]= apply( clim[inds,c("Min","Max")], MARGIN=1, FUN=degree.days.mat, LDT=12 )  
+
+#-----------
+# Calculate additional DD metrics
+#Summer 60-243
+#June 152-181
+#July 182-212
+#Aug 213-243
+#Early 60-151
+#Mid 60-181
+
+clim$dd_sum=clim$dd
+clim[which(clim$Julian<60 | clim$Julian>243),"dd_sum"]<-0
+
+clim$dd_june=clim$dd
+clim[which(clim$Julian<152 | clim$Julian>181),"dd_june"]<-0
+
+clim$dd_july=clim$dd
+clim[which(clim$Julian<182 | clim$Julian>212),"dd_july"]<-0
+
+clim$dd_aug=clim$dd
+clim[which(clim$Julian<213 | clim$Julian>243),"dd_aug"]<-0
+
+clim$dd_early=clim$dd
+clim[which(clim$Julian<60 | clim$Julian>151),"dd_early"]<-0
+
+clim$dd_mid=clim$dd
+clim[which(clim$Julian<60 | clim$Julian>181),"dd_mid"]<-0
+
+#---------------------
+#species specific cdd: month before mean ordinal date
+clim$dd_ac=clim$dd
+clim[which(clim$Julian<(195-30) | clim$Julian>(195+30) ),"dd_ac"]<-0
+clim$dd_mb=clim$dd
+clim[which(clim$Julian<(208-30) | clim$Julian>(208+30) ),"dd_mb"]<-0
+clim$dd_ms=clim$dd
+clim[which(clim$Julian<(224-30) | clim$Julian>(224+30) ),"dd_ms"]<-0
+
+#=========================
+#WRITE OUT
+setwd( paste(fdir, "climate", sep="") )   
+write.csv(clim,"AlexanderClimateAll_filled.csv")
+
+#--------------------------
+#CHECK B1 data
+
+clim.b1= clim[clim$Site=="B1" & clim$Julian %in% 60:243,]
+clim.b1$Year= as.factor(clim.b1$Year)
+
+ggplot(data=clim.b1, aes(x=Julian, y = Min, color=Year))+geom_smooth() +theme_bw()
+ggplot(data=clim.b1, aes(x=Julian, y = Max, color=Year))+geom_smooth() +theme_bw()
+
+clim.b1[clim.b1$Year==2009,"Max"]
+## FIX RECONSTRUCTION, WRONG COLUMNS
 
 

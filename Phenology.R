@@ -1,10 +1,10 @@
 #load libraries
 library(ggplot2)
-library(plyr)
+library(plyr) 
 library(dplyr)
 
-sites= c("Redfox", "A1", "B1", "C1", "D1")  
-elevs= c(1574, 2195, 2591, 3048, 3739)
+sites= c("CHA", "A1", "B1", "C1", "D1")  #Redfox: 1574
+elevs= c(1752, 2195, 2591, 3048, 3739)
 
 #source degree days function
 setwd("C:\\Users\\Buckley\\Documents\\HopperPhenology\\")
@@ -15,63 +15,14 @@ fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
 
 #load climate data
 setwd( paste(fdir, "climate", sep="") )   
-clim= read.csv("AlexanderClimateAll.csv")
-
-#Use NOAA for CHA
-clim$Site= as.character(clim$Site)
-clim[which(clim$Site=="NOAA"),"Site"]<-"CHA"
-clim$Site= as.factor(clim$Site)
-
-#------
-## ADD GDD data
-dd= degree.days.mat(cbind(clim$Min, clim$Max),LDT=12)
-inds= which(!is.na(clim[,"Min"])& !is.na(clim[,"Max"]) )
-clim$dd=NA
-clim$dd[inds]= apply( clim[inds,c("Min","Max")], MARGIN=1, FUN=degree.days.mat, LDT=12 )  
-
-#-----------
-# Calculate additional DD metrics
-#Summer 60-243
-#June 152-181
-#July 182-212
-#Aug 213-243
-#Early 60-151
-#Mid 60-181
-
-clim$dd_sum=clim$dd
-clim[which(clim$Julian<60 | clim$Julian>243),"dd_sum"]<-0
-
-clim$dd_june=clim$dd
-clim[which(clim$Julian<152 | clim$Julian>181),"dd_june"]<-0
-
-clim$dd_july=clim$dd
-clim[which(clim$Julian<182 | clim$Julian>212),"dd_july"]<-0
-
-clim$dd_aug=clim$dd
-clim[which(clim$Julian<213 | clim$Julian>243),"dd_aug"]<-0
-
-clim$dd_early=clim$dd
-clim[which(clim$Julian<60 | clim$Julian>151),"dd_early"]<-0
-
-clim$dd_mid=clim$dd
-clim[which(clim$Julian<60 | clim$Julian>181),"dd_mid"]<-0
-
-#---------------------
-#species specific cdd: month before mean ordinal date
-clim$dd_ac=clim$dd
-clim[which(clim$Julian<(195-30) | clim$Julian>(195+30) ),"dd_ac"]<-0
-clim$dd_mb=clim$dd
-clim[which(clim$Julian<(208-30) | clim$Julian>(208+30) ),"dd_mb"]<-0
-clim$dd_ms=clim$dd
-clim[which(clim$Julian<(224-30) | clim$Julian>(224+30) ),"dd_ms"]<-0
+clim= read.csv("AlexanderClimateAll_filled.csv")
 
 #---------------------
 #cummulative degree days
 #cumsum within groups
 clim = clim %>% group_by(Year,Site) %>% arrange(Julian) %>% mutate(cdd_sum = cumsum(dd_sum),cdd_june = cumsum(dd_june),cdd_july = cumsum(dd_july),cdd_aug = cumsum(dd_aug),cdd_early = cumsum(dd_early),cdd_mid = cumsum(dd_mid),cdd_ac = cumsum(dd_ac),cdd_mb = cumsum(dd_mb),cdd_ms = cumsum(dd_ms) ) 
-#need to deal with NAs?
 
-#---------------------
+#========================================================================
 #load hopper data
 setwd( paste(fdir, "grasshoppers\\SexCombined\\", sep="") )
 
@@ -314,12 +265,14 @@ ggplot(data=hop2, aes(x=cdd, y = mean, color=site, shape=period))+geom_point()+g
 #median individual ordinal by dd
 ggplot(data=hop4, aes(x=cdd, y = ordinal, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
 
+#drop sites with missing gdd data
+hop2= hop2[which(hop2$cdd_sum>0),]
 
 #focus on sites B1 and C1 for now
-hop3= hop2[which(hop2$site %in% c("B1", "C1", "CHA")) ,]
+hop3= hop2[which(hop2$site %in% c("A1","B1", "C1", "CHA")) ,]
 
 #drop due to missing climate data?
-hop3= hop3[-which(hop3$siteyear %in% c("C12013","B12009")) ,] #
+#hop3= hop3[-which(hop3$siteyear %in% c("C12013","B12009")) ,] #
 
 #add elevation
 hop3$elevation= as.factor(elevs[match(hop3$site, sites)])
@@ -329,7 +282,7 @@ setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\fi
 
 #min ordinal date by dd, #plot regression
 pdf("Phen_byGDD.pdf", height = 7, width = 10)
-ggplot(data=hop3, aes(x=cdd, y = min, color=elevation))+geom_point(aes(shape=period, fill=period), size=3)+facet_wrap(~species, ncol=3) +theme_bw()+geom_smooth(method="lm")+ylim(125,250)+ylab("First appearance date")+xlab("Growing degree days")+ scale_color_manual(values=c("darkgreen","darkorange", "blue"))
+ggplot(data=hop3, aes(x=cdd, y = min, color=elevation))+geom_point(aes(shape=period, fill=period), size=3)+facet_wrap(~species, ncol=3) +theme_bw()+geom_smooth(method="lm")+ylim(125,250)+ylab("First appearance date")+xlab("Growing degree days")+ scale_color_manual(values=c("darkgreen","darkorange", "blue","purple"))
 dev.off()
 
 #====================================
@@ -344,6 +297,8 @@ clim2= clim2[which(clim2$Site %in% c("A1","B1","C1")),]
 clim2$period="initial"
 clim2[which(clim2$Year>1960) ,"period"]="resurvey"
 
+clim2$cdd= clim2$cdd_sum
+
 #plot GDD accumulation over time
 ggplot(data=clim2, aes(x=Julian, y = cdd, color=as.factor(Year),linetype=period))+geom_line()+facet_grid(.~Site) +theme_bw()
 
@@ -352,6 +307,8 @@ ggplot(data=clim2, aes(x=Julian, y = cdd, color=as.factor(Year),linetype=period)
 
 hop2$min.cdd=NA
 hop2$mean.cdd=NA
+
+clim$cdd= clim$cdd_sum
 
 #gdd at 1st appearance
 hop.m= paste(hop2$siteyear,hop2$min,sep="")

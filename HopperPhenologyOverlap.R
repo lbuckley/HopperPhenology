@@ -189,9 +189,20 @@ dev.off()
 mod1= lm(value~ cdd*elevation+sp2+sp1, data=po2)
 mod1= lm(value~ cdd*elevation+sp, data=po2)
 
-po3= subset(po2, po2$sp1=="Aeropedellus clavatus")
-po3= subset(po2, po2$sp1=="Melanoplus boulderensis")
-mod1= lm(value~ cdd*elevation, data=po3)
+#by focal species
+sp.k=6
+po3= subset(po2, po2$sp1==specs[sp.k] | po2$sp2==specs[sp.k])
+#switch species order
+p.temp= po3$sp1
+inds= which(po3$sp2==specs[sp.k])
+if(length(inds)>0){
+ po3$sp1[inds]=specs[sp.k] 
+ po3$sp2[inds]=po3$sp1[inds] 
+}
+
+po3$elevation= as.numeric(as.character(po3$elevation))
+mod1= lm(value~ cdd*elevation+sp2, data=po3)
+summary(mod1)
 
 #--------------------------------
 #significant trends by species
