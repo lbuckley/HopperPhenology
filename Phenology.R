@@ -12,6 +12,7 @@ source("degreedays.R")
 
 #--------------------------------------
 fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
+#fdir= "C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
 
 #load climate data
 setwd( paste(fdir, "climate", sep="") )   
@@ -270,9 +271,6 @@ hop2= hop2[which(hop2$cdd_sum>0),]
 
 #focus on sites B1 and C1 for now
 hop3= hop2[which(hop2$site %in% c("A1","B1", "C1", "CHA")) ,]
-
-#drop due to missing climate data?
-#hop3= hop3[-which(hop3$siteyear %in% c("C12013","B12009")) ,] #
 
 #add elevation
 hop3$elevation= as.factor(elevs[match(hop3$site, sites)])

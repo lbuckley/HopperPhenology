@@ -10,6 +10,7 @@ source("degreedays.R")
 
 #--------------------------------------
 fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
+#fdir= "C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
 
 #load climate data
 setwd( paste(fdir, "climate", sep="") )   
@@ -208,6 +209,56 @@ clim1[matched,c("Site","Julian","Year","Max","Min","Mean")]= allClim[match1[matc
 # Re-order Climate data
 clim1 <- clim1[order(clim1$Site, clim1$Year, clim1$Julian),]
 
+#---------------------
+#Update climate data
+setwd( paste(fdir, "climate\\Recent\\", sep="") ) 
+
+#Fix B1 2009 data
+clim.b1.2009.tmax= read.csv( "B1_2009_Tmax.csv" )
+clim.b1.2009.tmin= read.csv( "B1_2009_Tmin.csv" )
+
+clim.b1.2009.tmax$Min= clim.b1.2009.tmin$Min
+
+clim.b1.2009.tmax$Site="B1"
+clim.b1.2009.tmax$sjy= paste(clim.b1.2009.tmax$Site, clim.b1.2009.tmax$Julian, clim.b1.2009.tmax$Year, sep="_")
+#match
+match1= match(clim1$sjy, clim.b1.2009.tmax$sjy)
+matched= which(!is.na(match1))
+
+clim1[matched,c("Max","Min")]= clim.b1.2009.tmax[match1[matched], c("Max","Min")]
+
+#----
+#ADD C1 2015
+clim.c1.2015= read.csv( "C1_2015_CHECK.csv" )
+#calculate Julian
+tmp <- as.POSIXlt(clim.c1.2015$C1.Temp.data, format = "%m/%d/%Y %H:%M")
+clim.c1.2015$Julian= tmp$yday+1
+#calc min and max
+clim.c1.2015= clim.c1.2015 %>% group_by(Julian) %>% summarise(Min= min(Tc),Max= max(Tc) )
+clim.c1.2015= as.data.frame(clim.c1.2015)
+clim.c1.2015$Site="C1"
+clim.c1.2015$Year=2015
+clim.c1.2015$sjy= paste(clim.c1.2015$Site, clim.c1.2015$Julian, clim.c1.2015$Year, sep="_")
+#match
+match1= match(clim1$sjy, clim.c1.2015$sjy)
+matched= which(!is.na(match1))
+
+clim1[matched,c("Max","Min")]= clim.c1.2015[match1[matched], c("Max","Min")]
+
+#----
+#ADD RECONSTRUCTED A1 data
+clim.a1= read.csv("A1_2009_2010_reconstruct.csv")
+
+clim.a1$Site="A1"
+clim.a1$sjy= paste(clim.a1$Site, clim.a1$Julian, clim.a1$Year, sep="_")
+#match
+match1= match(clim1$sjy, clim.a1$sjy)
+matched= which(!is.na(match1))
+
+clim1[matched,c("Max","Min")]= clim.a1[match1[matched], c("Max","Min")]
+
+#------------------------
+
 clim.nas= clim1[(is.na(clim1$Min) | is.na(clim1$Max)),] 
 clim.nas$Year= as.factor(clim.nas$Year)
 #counts by sites, years
@@ -224,6 +275,14 @@ clim1$Max[inds[1]]= clim1$Max[inds[2]]
 inds= which(clim1$Site=="C1"&clim1$Year=="2013")
 clim1$Min[inds] <- na.approx(clim1$Min[inds], na.rm = F, maxgap=5)
 clim1$Max[inds] <- na.approx(clim1$Max[inds], na.rm = F, maxgap=5)
+#--------
+inds= which(clim1$Site=="C1"&clim1$Year=="2015")
+clim1$Min[inds] <- na.approx(clim1$Min[inds], na.rm = F, maxgap=6)
+clim1$Max[inds] <- na.approx(clim1$Max[inds], na.rm = F, maxgap=6)
+#--------
+inds= which(clim1$Site=="A1"&clim1$Year=="2010")
+clim1$Min[inds] <- na.approx(clim1$Min[inds], na.rm = F, maxgap=6)
+clim1$Max[inds] <- na.approx(clim1$Max[inds], na.rm = F, maxgap=6)
 
 #--------------------
 #Add degree days
@@ -283,15 +342,21 @@ setwd( paste(fdir, "climate", sep="") )
 write.csv(clim,"AlexanderClimateAll_filled.csv")
 
 #--------------------------
-#CHECK B1 data
+#CHECK DATA
 
+#B1
 clim.b1= clim[clim$Site=="B1" & clim$Julian %in% 60:243,]
 clim.b1$Year= as.factor(clim.b1$Year)
 
 ggplot(data=clim.b1, aes(x=Julian, y = Min, color=Year))+geom_smooth() +theme_bw()
 ggplot(data=clim.b1, aes(x=Julian, y = Max, color=Year))+geom_smooth() +theme_bw()
 
-clim.b1[clim.b1$Year==2009,"Max"]
-## FIX RECONSTRUCTION, WRONG COLUMNS
+#------
+#A1
+clim=clim1
+clim.a1= clim[clim$Site=="A1" & clim$Julian %in% 60:243,]
+clim.a1$Year= as.factor(clim.a1$Year)
 
+ggplot(data=clim.a1, aes(x=Julian, y = Min, color=Year))+geom_smooth() +theme_bw()
+ggplot(data=clim.a1, aes(x=Julian, y = Max, color=Year))+geom_smooth() +theme_bw()
 
