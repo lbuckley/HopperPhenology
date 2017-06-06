@@ -163,17 +163,14 @@ po1$Tmean[matched]<- clim1$Mean[match1[matched]]
 po1$cdd[matched]<- clim1$Cdd[match1[matched]]
 
 #focus on sites B1 and C1 for now
-po2= po1[which(po1$site %in% c("B1", "C1")) ,]
-
-#drop due to missing climate data?
-po2= po2[-which(po2$siteyear %in% c("C12013")) ,] #,"B12009"
+po2= po1 #[which(po1$site %in% c("B1", "C1")) ,]
 
 #plot
 setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\")
 
 #overlap by temp
 pdf("PhenOverlap_byTemp.pdf", height = 10, width = 10)
-ggplot(data=po1, aes(x=Tmean, y = value, color=site, shape=period))+geom_point()+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()#+geom_smooth(method=lm, se=FALSE)
+ggplot(data=po2, aes(x=Tmean, y = value, color=site, shape=period))+geom_point()+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()#+geom_smooth(method=lm, se=FALSE)
 dev.off()
 
 #add elevation
@@ -181,7 +178,7 @@ po2$elevation= as.factor(elevs[match(po2$site, sites)])
 
 #overlap by GDD
 pdf("PhenOverlap_byGDD.pdf", height = 8, width = 10)
-ggplot(data=po2, aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=3)+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm")+ylim(0,1)+ylab("Phenological overlap")+xlab("Growing degree days")+ scale_color_manual(values=c("darkorange", "blue"))
+ggplot(data=po2, aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=3)+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm")+ylim(0,1)+ylab("Phenological overlap")+xlab("Growing degree days")+ scale_color_manual(values=c("darkorange", "blue","darkgreen","purple"))
 dev.off()
 
 #===================================
