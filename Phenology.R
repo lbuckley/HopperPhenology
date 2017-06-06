@@ -69,6 +69,27 @@ hop[which(hop$species=="Cratypedes neglectus"),"species"]="Cratypledes neglectus
 #replace _ with space
 hop$species=gsub("_"," ", hop$species)
 
+#------------------------------------
+#Add GDD data
+
+#columns for matching
+clim$sjy= paste(clim$Site, clim$Julian, clim$Year, sep="_")
+hop$sjy= paste(hop$site, hop$ordinal, hop$year, sep="_")
+
+#match
+match1= match(hop$sjy,clim$sjy)
+matched= which(!is.na(match1))
+
+hop$cdd_sum=NA; hop$cdd_june=NA; hop$cdd_july=NA; hop$cdd_aug=NA; hop$cdd_early=NA; hop$cdd_mid=NA; hop$cdd_ac=NA; hop$cdd_mb=NA; hop$cdd_ms=NA
+
+hop[matched,c("cdd_sum","cdd_june","cdd_july","cdd_aug","cdd_early","cdd_mid","cdd_ac","cdd_mb","cdd_ms")]= clim[match1[matched], c("cdd_sum","cdd_june","cdd_july","cdd_aug","cdd_early","cdd_mid","cdd_ac","cdd_mb","cdd_ms")]
+
+#-------------------------------------
+
+#Write hopper data out
+setwd( paste(fdir, "grasshoppers\\SexCombined\\", sep="") )
+#write.csv(hop, "HopperData.csv")
+
 #--------------------------------------
 #ANALYSIS
 

@@ -24,6 +24,14 @@ count= function(x){
 #--------------------------------------
 fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
 
+#load climate data
+setwd( paste(fdir, "climate", sep="") )   
+clim= read.csv("AlexanderClimateAll_filled.csv")
+
+#load hopper data
+setwd( paste(fdir, "grasshoppers\\SexCombined\\", sep="") )
+hop= read.csv("HopperData.csv")
+
 #==========================================================
 
 dat=hop
@@ -63,13 +71,13 @@ mod1= lme(DI ~ poly(ordinal,3)+elev*per* species, random=~1|year, data=dat)
 anova(mod1)
 
 #GDD TEXT MODEL
-dat=na.omit(dat)
+dat1=na.omit(dat)
 #nlme model
-mod1= lme(DI ~ poly(GDDs,3)+elev*per+species, random=~1|year, data=dat)
-mod1= lme(DI ~ poly(GDDs,3)+elev*per*species, random=~1|year, data=dat)
+mod1= lme(DI ~ poly(GDDs,3)+elev*per+species, random=~1|year, data=dat1)
+mod1= lme(DI ~ poly(GDDs,3)+elev*per*species, random=~1|year, data=dat1)
 anova(mod1)
 
-dat1= subset(dat, dat$species==specs[[2]])
+dat1= subset(dat1, dat1$species==specs[[2]])
 mod1= lme(DI ~ poly(GDDs,3)+elev*per, random=~1|year, data=dat1)
 
 anova(mod1,type="marginal")
@@ -93,10 +101,11 @@ if(length(drop)>0) dat=dat[-drop,]
 #--------------------
 #DEVELOPMENTAL INDEX
 #Plot DI by ordinal date
-di.plot= ggplot(data=dat, aes(x=ordinal, y = DI, color=year))+facet_grid(species~elev) +geom_point(aes(shape=period), size=3)+theme_bw()+geom_line()
+di.plot= ggplot(data=dat, aes(x=ordinal, y = DI, color=year))+facet_grid(species~elev) +geom_point(aes(shape=period), size=2)+theme_bw()+geom_line()
 
 #Plot DI by GDD
-di.plot= ggplot(data=dat, aes(x=GDDs, y = DI, color=year))+facet_grid(species~elev) +geom_point(aes(shape=period), size=1)+theme_bw()+geom_line()+xlim(0,600)
+dat$cdd= dat$cdd_sum
+di.plot= ggplot(data=dat, aes(x=cdd, y = DI, color=year))+facet_grid(species~elev) +geom_point(aes(shape=period), size=2)+theme_bw()+geom_line()+xlim(0,600)
 #note xlim restricted
 
 #--------------------
@@ -129,16 +138,17 @@ dat.t= dat.t %>% mutate(in6.cper= in6.per+in5.per+in4.per+in3.per+in2.per+in1.pe
                         in5.cper= in5.per+in4.per+in3.per+in2.per+in1.per,
                         in4.cper= in4.per+in3.per+in2.per+in1.per,
                         in3.cper= in3.per+in2.per+in1.per,
-                        in2.cper= in2.per+in1.per)
+                        in2.cper= in2.per+in1.per,
+                        in1.cper= in1.per)
 
-#To long format
-dat.t1= dat.t[,c(1:7,27:32) ] 
-dat.t2 <- gather(dat.t, stage, cper, in6.cper:in1.per, factor_key=TRUE)
+dat.t1= dat.t[,c(1:4,41:46) ] 
+#To long format, needed?
+dat.t2 <- gather(dat.t1, stage, cper, in6.cper:in1.cper, factor_key=TRUE)
 
 #-------
 
 #PLOT
-dat.t3= subset(dat.t, dat.t2$site=="B1")
+dat.t3= subset(dat.t1, dat.t1$site=="B1")
 dat.t3$GDDs_binned= gdds[dat.t3$gdd.bin]
 
 g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(species~year)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)
@@ -146,7 +156,7 @@ g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5"
 #--------------------------------
 #Just boulderensis
 
-dat.t3= subset(dat.t, dat.t2$species=="Melanoplus boulderensis")
+dat.t3= subset(dat.t1, dat.t1$species=="Melanoplus boulderensis")
 dat.t3$GDDs_binned= gdds[dat.t3$gdd.bin]
 
 g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(site~year)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+xlim(0,300)
