@@ -1,9 +1,10 @@
- #load libraries
+#load libraries
 library(ggplot2)
 library(plyr)
 library(dplyr)
 library(reshape2)
 library(tidyr)
+library(gridExtra)
 
 library(lme4)
 library(nlme)
@@ -31,6 +32,12 @@ clim= read.csv("AlexanderClimateAll_filled.csv")
 #load hopper data
 setwd( paste(fdir, "grasshoppers\\SexCombined\\", sep="") )
 hop= read.csv("HopperData.csv")
+#fix GDD column
+hop$GDDs= hop$cdd_sum
+#-------------------------
+#cummulative degree days
+#cumsum within groups
+clim = clim %>% group_by(Year,Site) %>% arrange(Julian) %>% mutate(cdd_sum = cumsum(dd_sum),cdd_june = cumsum(dd_june),cdd_july = cumsum(dd_july),cdd_aug = cumsum(dd_aug),cdd_early = cumsum(dd_early),cdd_mid = cumsum(dd_mid),cdd_ac = cumsum(dd_ac),cdd_mb = cumsum(dd_mb),cdd_ms = cumsum(dd_ms) )
 
 #==========================================================
 
@@ -108,11 +115,9 @@ dat$cdd= dat$cdd_sum
 di.plot= ggplot(data=dat, aes(x=cdd, y = DI, color=year))+facet_grid(species~elev) +geom_point(aes(shape=period), size=2)+theme_bw()+geom_line()+xlim(0,600)
 #note xlim restricted
 
-#--------------------
-#BIN?
-
+#==============================================================================
 ##Bin by GDD
-gdds= seq( min(dat$GDDs, na.rm=TRUE), max(dat$GDDs, na.rm=TRUE), 30)
+gdds= seq( min(dat$GDDs, na.rm=TRUE), max(dat$GDDs, na.rm=TRUE), length.out=30)
 dat$gdd.bin= cut(dat$GDD, breaks = gdds, labels=FALSE)
 
 dat.gddbin = dat %>% group_by(species,site,year,gdd.bin) %>% summarise_each(funs(mean))
@@ -124,11 +129,41 @@ dat$date.bin= cut(dat$ordinal, breaks = dates, labels=FALSE, include.highest=TRU
 dat.datebin = dat %>% group_by(species,site,year,date.bin) %>% summarise_each(funs(mean))
 
 #dat$timeper= cut(dat$year, breaks = c(1957,1961,2011), labels=FALSE)
-#------------------------------------------------------
-#Composition plot
 
-cols= gray.colors(4)
-cols=rev(cols)
+#----------------
+#order by season gdd
+#calculate number of seasonal gdds
+clim.seas= clim %>% group_by(Year,Site) %>% summarise(dd.seas= max(cdd_sum) )
+clim.seas$sy= paste(clim.seas$Site, clim.seas$Year, sep="_")
+
+#plot seasonal dd by year
+ggplot(data=clim.seas,aes(x=Year, y = dd.seas, color=Site)) + geom_point()+geom_line()
+
+#------------
+#group by seasonal GDD
+#drop sites without data
+clim.seas2= clim.seas
+clim.seas2= clim.seas[-which(clim.seas$Site %in% c("A1")),]
+clim.seas2= clim.seas[-which(clim.seas$Site %in% c("A1","CHA")),]
+
+clim.seas2= clim.seas2 %>% group_by(Year) %>% summarise(dd.seas= mean(dd.seas) )
+clim.seas2= clim.seas2[order(clim.seas2$dd.seas),]
+
+#------
+#CODE BY GDD
+#initial 1958,1959,1960
+#cold 2009,2010,2014
+#med 2008,2011,2013,2015
+#warm 2006, 2007,2012
+
+dat$per=NA
+dat$per[which(dat$year %in% c(1958,1959,1960) )]="initial"
+dat$per[which(dat$year %in% c(2009,2010,2014) )]="cold"
+dat$per[which(dat$year %in% c(2008,2011,2013,2015) )]="med"
+dat$per[which(dat$year %in% c(2006,2007,2012) )]="warm"
+
+#==========================================================================
+#Composition plot
 
 #Calculate percent composition
 dat.t= dat.gddbin
@@ -145,6 +180,29 @@ dat.t1= dat.t[,c(1:4,41:46) ]
 #To long format, needed?
 dat.t2 <- gather(dat.t1, stage, cper, in6.cper:in1.cper, factor_key=TRUE)
 
+#match
+dat.t1$sy= paste(dat.t1$site, dat.t1$year, sep="_")
+match1= match(dat.t1$sy,clim.seas$sy)
+matched= which(!is.na(match1))
+
+dat.t1$dd.seas=NA
+dat.t1[matched,"dd.seas"]= clim.seas[match1[matched], "dd.seas"]
+#round
+dat.t1$dd.seas= round(dat.t1$dd.seas)
+
+#------
+#CODE BY GDD #see estimates below
+#initial 1958,1959,1960
+#cold 2009,2010,2014
+#med 2008,2011,2013,2015
+#warm 2006, 2007,2012
+
+dat.t1$per=NA
+dat.t1$per[which(dat.t1$year %in% c(1958,1959,1960) )]="initial"
+dat.t1$per[which(dat.t1$year %in% c(2009,2010,2014) )]="cold"
+dat.t1$per[which(dat.t1$year %in% c(2008,2011,2013,2015) )]="med"
+dat.t1$per[which(dat.t1$year %in% c(2006,2007,2012) )]="warm"
+
 #-------
 
 #PLOT
@@ -153,10 +211,77 @@ dat.t3$GDDs_binned= gdds[dat.t3$gdd.bin]
 
 g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(species~year)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)
 
-#--------------------------------
+#=======================================
 #Just boulderensis
 
 dat.t3= subset(dat.t1, dat.t1$species=="Melanoplus boulderensis")
 dat.t3$GDDs_binned= gdds[dat.t3$gdd.bin]
 
-g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(site~year)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+xlim(0,300)
+#--------------
+
+g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(site~year, scales = "free_x")+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+xlim(0,300)
+
+#--------------------
+#split by site
+dat.b1= subset(dat.t3, dat.t3$site %in% c("B1") )
+
+g.b1= ggplot(data=dat.b1) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(.~year)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+xlim(0,300)
+
+#by GDD
+ggplot(data=dat.b1) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(.~dd.seas)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+xlim(0,300)
+
+#--------------------
+dat.c1= subset(dat.t3, dat.t3$site %in% c("C1") )
+
+g.c1= ggplot(data=dat.c1) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(.~year)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+xlim(0,150)
+
+#by GDD
+ggplot(data=dat.c1) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(.~dd.seas)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+xlim(0,150)
+
+#------------------
+# AVERAGE ACROSS PERIODS
+dat.per= dat.t3 %>% group_by(species, site, per, gdd.bin) %>% summarise(in6.cper=mean(in6.cper), in5.cper=mean(in5.cper), in4.cper=mean(in4.cper), in3.cper=mean(in3.cper), in2.cper=mean(in2.cper), in1.cper=mean(in1.cper), GDDs_binned=mean(GDDs_binned) )
+  
+#order by period
+dat.per$per= factor(dat.per$per,levels=c("initial","cold","med","warm"), ordered=TRUE)
+
+g1= ggplot(data=dat.per) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in4.cper, color="in4")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(site~per, scales = "free_x")+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in4.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in4.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+xlim(0,300)+ylab("proportional composition")
+
+#----------------------
+#PLOT
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\DevelopInd\\")
+file<-paste("Composition_boulderensis.pdf" ,sep="", collapse=NULL)
+pdf(file,height = 10, width = 10)
+g1
+dev.off()
+
+#--------------------
+#DEVELOPMENTAL INDEX
+#Plot DI by ordinal date
+
+dat.b= subset(dat, dat$species %in% c("Melanoplus boulderensis") ) 
+
+# AVERAGE ACROSS PERIODS
+dat.bper= dat.b %>% group_by(site, elev, per, date.bin) %>% summarise(DI=mean(DI), ordinal=mean(ordinal) )
+#order by period
+dat.bper$per= factor(dat.bper$per,levels=c("initial","cold","med","warm"), ordered=TRUE)
+
+#plot by date bin
+di.plot.date= ggplot(data=dat.bper, aes(x=ordinal, y = DI, color=per))+facet_grid(site~.) +theme_bw()+geom_line(size=2)+xlim(140,220)
+
+#by GDD bin
+dat.bper= dat.b %>% group_by(site, elev, per, gdd.bin) %>% summarise(DI=mean(DI), cdd_sum=mean(cdd_sum) )
+#order by period
+dat.bper$per= factor(dat.bper$per,levels=c("initial","cold","med","warm"), ordered=TRUE)
+
+#Plot DI by GDD
+dat.bper$cdd= dat.bper$cdd_sum
+di.plot.gdd= ggplot(data=dat.bper, aes(x=cdd, y = DI, color=per))+facet_grid(site~.)+theme_bw()+geom_line(size=2)+xlim(0,250)
+
+#------------------
+#PLOT
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\DevelopInd\\")
+file<-paste("DevelopmentalIndex_boulderensis.pdf" ,sep="", collapse=NULL)
+pdf(file,height = 10, width = 10)
+grid.arrange(di.plot.date,di.plot.gdd,ncol=2 )
+dev.off()
