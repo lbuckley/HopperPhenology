@@ -162,6 +162,22 @@ dat$per[which(dat$year %in% c(2009,2010,2014) )]="cold"
 dat$per[which(dat$year %in% c(2008,2011,2013,2015) )]="med"
 dat$per[which(dat$year %in% c(2006,2007,2012) )]="warm"
 
+#--------------------------
+#PLOT DI by grouped years
+
+#average across years
+dat$gdd.binned= gdds[dat$gdd.bin]
+dat2= dat %>% group_by(species,elev, site, per,gdd.binned) %>%  mutate(DI=mean(DI) )
+
+#DEVELOPMENTAL INDEX
+#Plot DI by ordinal date
+di.plot= ggplot(data=dat, aes(x=ordinal, y = DI, color=per))+facet_grid(species~elev) +geom_point(aes(shape=period), size=2)+theme_bw()+geom_line()
+
+#Plot DI by GDD
+dat$cdd= dat$cdd_sum
+di.plot= ggplot(data=dat, aes(x=cdd, y = DI, color=per))+facet_grid(species~elev) +geom_point(aes(shape=period), size=2)+theme_bw()+geom_line()+xlim(0,600)
+#note xlim restricted
+
 #==========================================================================
 #Composition plot
 
@@ -284,4 +300,4 @@ setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\fi
 file<-paste("DevelopmentalIndex_boulderensis.pdf" ,sep="", collapse=NULL)
 pdf(file,height = 10, width = 10)
 grid.arrange(di.plot.date,di.plot.gdd,ncol=2 )
-dev.off()
+dev.off() 

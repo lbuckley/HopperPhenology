@@ -10,7 +10,9 @@ elevs= c(1752, 2195, 2591, 3048, 3739)
 setwd("C:\\Users\\Buckley\\Documents\\HopperPhenology\\")
 source("degreedays.R")
 
-#--------------------------------------
+#======================================================
+#READ DATA
+
 fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
 #fdir= "C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
 
@@ -23,74 +25,12 @@ clim= read.csv("AlexanderClimateAll_filled.csv")
 #cumsum within groups
 clim = clim %>% group_by(Year,Site) %>% arrange(Julian) %>% mutate(cdd_sum = cumsum(dd_sum),cdd_june = cumsum(dd_june),cdd_july = cumsum(dd_july),cdd_aug = cumsum(dd_aug),cdd_early = cumsum(dd_early),cdd_mid = cumsum(dd_mid),cdd_ac = cumsum(dd_ac),cdd_mb = cumsum(dd_mb),cdd_ms = cumsum(dd_ms) ) 
 
-#========================================================================
+
 #load hopper data
 setwd( paste(fdir, "grasshoppers\\SexCombined\\", sep="") )
+hop= read.csv("HopperData.csv")
 
-hop.b1= read.csv( "B1_1959-2015_eggDiapause.csv" )
-hop.c1= read.csv( "C1_1959-2015_eggDiapause.csv" )
-hop.cha= read.csv( "CHA_1959-2012_eggDiapause.csv" )
-#add old a1 data
-hop.a1= read.csv( "A1data_old.csv" )
-
-#update A1 data
-hop.a1.up= read.csv( "A1_1958-2011_allSpecies.csv" ) 
-#combine for now across sex and subsite
-hop.a1.up2= ddply(hop.a1.up, .(species,year,ordinal), summarize, date=date[1], GDDs= GDDs[1], in6= sum(in6),in5= sum(in5),in4= sum(in4),in3= sum(in3),in2= sum(in2),in1= sum(in1),total= sum(total), month=month[1], day=day[1], site=site[1] )
-hop.a1= hop.a1.up2[,c("date","ordinal","GDDs","species","in6","in5","in4","in3","in2","in1","total","month","day","year","site")]                  
-
-#add site
-hop.b1$site="B1"
-hop.c1$site="C1"
-hop.cha$site="CHA"
-
-#combine
-hop= rbind(hop.a1,hop.b1,hop.c1,hop.cha)
-
-#add time period
-hop$period="initial"
-hop[which(hop$year>1960) ,"period"]="resurvey"
-
-#--------------------------------------
-#CHECK DATA
-
-#check years
-sort(unique(clim$Year)) #through 2014
-sort(unique(hop$year)) #through 2015
-
-#remove white space in species names
-hop$species=trimws(hop$species, which = "both")
-#check species
-sort(unique(hop$species))
-#Fix typos
-hop[which(hop$species=="Melanoplus bouderensis"),"species"]="Melanoplus boulderensis"
-hop[which(hop$species=="Melanoplus dodgei"),"species"]="Melanoplus boulderensis"
-hop[which(hop$species=="Melanoplus bivitattus"),"species"]="Melanoplus bivittatus"
-hop[which(hop$species=="Cratypedes neglectus"),"species"]="Cratypledes neglectus"
-#replace _ with space
-hop$species=gsub("_"," ", hop$species)
-
-#------------------------------------
-#Add GDD data
-
-#columns for matching
-clim$sjy= paste(clim$Site, clim$Julian, clim$Year, sep="_")
-hop$sjy= paste(hop$site, hop$ordinal, hop$year, sep="_")
-
-#match
-match1= match(hop$sjy,clim$sjy)
-matched= which(!is.na(match1))
-
-hop$dd_sum=NA;hop$cdd_sum=NA; hop$cdd_june=NA; hop$cdd_july=NA; hop$cdd_aug=NA; hop$cdd_early=NA; hop$cdd_mid=NA; hop$cdd_ac=NA; hop$cdd_mb=NA; hop$cdd_ms=NA
-
-hop[matched,c("dd_sum","cdd_sum","cdd_june","cdd_july","cdd_aug","cdd_early","cdd_mid","cdd_ac","cdd_mb","cdd_ms")]= clim[match1[matched], c("dd_sum","cdd_sum","cdd_june","cdd_july","cdd_aug","cdd_early","cdd_mid","cdd_ac","cdd_mb","cdd_ms")]
-#-------------------------------------
-
-#Write hopper data out
-setwd( paste(fdir, "grasshoppers\\SexCombined\\", sep="") )
-#write.csv(hop, "HopperData.csv")
-
-#--------------------------------------
+#======================================================
 #ANALYSIS
 
 #temperature plots
@@ -309,16 +249,27 @@ dev.off()
 #subset to years
 clim2= clim[which(clim$Year %in% c(1958:1960,2006:2015)),]
 #subset sites
-clim2= clim2[which(clim2$Site %in% c("A1","B1","C1")),]
+clim2= clim2[which(clim2$Site %in% c("A1","B1","C1","CHA")),]
 
 #add time period
-clim2$period="initial"
-clim2[which(clim2$Year>1960) ,"period"]="resurvey"
+clim2$per=NA
+clim2$per[which(clim2$Year %in% c(1958,1959,1960) )]="initial"
+clim2$per[which(clim2$Year %in% c(2009,2010,2014) )]="cold"
+clim2$per[which(clim2$Year %in% c(2008,2011,2013,2015) )]="med"
+clim2$per[which(clim2$Year %in% c(2006,2007,2012) )]="warm"
 
 clim2$cdd= clim2$cdd_sum
 
 #plot GDD accumulation over time
-ggplot(data=clim2, aes(x=Julian, y = cdd, color=as.factor(Year),linetype=period))+geom_line()+facet_grid(.~Site) +theme_bw()
+gdd.plot= ggplot(data=clim2, aes(x=Julian, y = cdd, color=as.factor(Year),linetype=per))+geom_line()+facet_grid(.~Site, scales="free_y") +theme_bw()
+
+#plot
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\")
+
+#min ordinal date by dd, #plot regression
+pdf("GDD_plot.pdf", height = 7, width = 10)
+gdd.plot
+dev.off()
 
 #------------------------------
 #plot initial, recent GDDs
