@@ -1,7 +1,37 @@
+#load libraries
+library(ggplot2)
+library(plyr) 
+library(dplyr)
 library(reshape)
 library(tidyr)
 
-#data currently from phenology file
+sites= c("CHA", "A1", "B1", "C1", "D1")  #Redfox: 1574
+elevs= c(1752, 2195, 2591, 3048, 3739)
+
+#source degree days function
+setwd("C:\\Users\\Buckley\\Documents\\HopperPhenology\\")
+source("degreedays.R")
+
+#======================================================
+#READ DATA
+
+fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
+#fdir= "C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
+
+#load climate data
+setwd( paste(fdir, "climate", sep="") )   
+clim= read.csv("AlexanderClimateAll_filled.csv")
+
+#---------------------
+#cummulative degree days
+#cumsum within groups
+clim = clim %>% group_by(Year,Site) %>% arrange(Julian) %>% mutate(cdd_sum = cumsum(dd_sum),cdd_june = cumsum(dd_june),cdd_july = cumsum(dd_july),cdd_aug = cumsum(dd_aug),cdd_early = cumsum(dd_early),cdd_mid = cumsum(dd_mid),cdd_ac = cumsum(dd_ac),cdd_mb = cumsum(dd_mb),cdd_ms = cumsum(dd_ms) ) 
+
+
+#load hopper data
+setwd( paste(fdir, "grasshoppers\\SexCombined\\", sep="") )
+hop= read.csv("HopperData.csv")
+
 #------------------------------------
 #Phenological overlap across elevation
 
@@ -132,6 +162,26 @@ pdf("PopPhenOverlap_byYear.pdf", height = 10, width = 10)
 ggplot(data=po1, aes(x=year, y = value, color=sp ))+geom_point() +facet_grid(sp1~sp2, drop=TRUE)+theme_bw() #+geom_smooth(method=lm) #geom_line
 dev.off() 
 
+#Average across years
+#restrict to recent years
+po2= po1[which(po1$year>2005),]
+po2= po2 %>% group_by(sp,site,sp, sp1, sp2) %>% summarise(N= length(na.omit(value)), value=mean(value, na.rm=TRUE), sd=sd(value, na.rm=TRUE), se = sd / sqrt(N))
+po2$value[is.nan(po2$value)] = NA
+
+ggplot(data=po2, aes(x=sp, y = value))+geom_point() +facet_grid(sp1~sp2, drop=TRUE)+theme_bw() #+geom_smooth(method=lm) #geom_line
+
+po3= po2[which(po2$sp1=="A1"),]
+#add elevation
+po2$elev=elevs[match(po2$sp2,sites)]
+
+plot1=ggplot(data=po2, aes(x=elev, y = value, color=sp))+geom_point(aes(shape=sp1), size=3)+geom_smooth(method=lm, se=FALSE) +theme_bw()+ theme(legend.position="right")
+
+#plot
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\")
+pdf("PopPhenOverlap_YearAve.pdf", height = 6, width = 6)
+plot1
+dev.off() 
+
 #--------
 #plot by temp and gdd
 clim1$siteyear= paste(clim1$Site, clim1$Year, sep="")
@@ -144,6 +194,7 @@ po1$Tmean2=NA
 po1$cdd2=NA
 
 #select cdd metric
+clim1=clim
 clim1$Cdd=  clim1$Cdd_july
 
 match1= match(po1$siteyear1, clim1$siteyear)

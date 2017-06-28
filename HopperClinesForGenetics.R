@@ -80,14 +80,19 @@ ggplot(data=feed2, aes(x=Temp, y = Area_8hr_nomass,color=Elev))+geom_point()+geo
 #PBT
 
 #group
-pbt2= pbt %>% group_by(elev,Spec) %>% summarise(PBT=mean(PBT, na.rm=TRUE), PBT.N= length(na.omit(PBT)),PBT.sd=sd(PBT, na.rm=TRUE), PBT.se=PBT.sd/sqrt(PBT.N), Ctmin=mean(Ctmin, na.rm=TRUE), Ctmin.N= length(na.omit(Ctmin)),Ctmin.sd=sd(Ctmin, na.rm=TRUE),Ctmin.se=Ctmin.sd/sqrt(Ctmin.N), Ctmax=mean(Ctmax, na.rm=TRUE), Ctmax.N= length(na.omit(Ctmax)),Ctmax.sd=sd(Ctmax, na.rm=TRUE), Ctmax.se=Ctmax.sd/sqrt(Ctmax.N))
+pbt2= pbt %>% group_by(elev,Spec) %>% summarise(PBT=mean(PBT, na.rm=TRUE), PBT.N= length(na.omit(PBT)),PBT.sd=sd(PBT, na.rm=TRUE), PBT.se=PBT.sd/sqrt(PBT.N), Ctmin=mean(Ctmin, na.rm=TRUE), Ctmin.N= length(na.omit(Ctmin)),Ctmin.sd=sd(Ctmin, na.rm=TRUE),Ctmin.se=Ctmin.sd/sqrt(Ctmin.N), Ctmax=mean(Ctmax, na.rm=TRUE), Ctmax.N= length(na.omit(Ctmax)),Ctmax.sd=sd(Ctmax, na.rm=TRUE), Ctmax.se=Ctmax.sd/sqrt(Ctmax.N), mass=mean(mass_g, na.rm=TRUE), mass.N= length(na.omit(mass_g)),mass.sd=sd(mass_g, na.rm=TRUE), mass.se=mass.sd/sqrt(mass.N))
 
 #PLOT
 ctmax.plot= ggplot(data=pbt2, aes(x=elev, y = Ctmax, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+
   theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
 pbt.plot= ggplot(data=pbt2, aes(x=elev, y = PBT, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+
   theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
 ctmin.plot= ggplot(data=pbt2, aes(x=elev, y = Ctmin, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="bottom")
+
+mass.plot= ggplot(data=pbt2, aes(x=elev, y = mass, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="bottom")+ 
+  geom_errorbar(aes(ymin=mass-mass.se, ymax=mass+mass.se), width=.1, position=pd)
 
 #PLOT
 setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperGenetics\\figures\\")
@@ -95,6 +100,25 @@ setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperGenetics\\fig
 pdf("thermtol_plot.pdf", height = 6, width = 8)
 grid::grid.draw(rbind(ggplotGrob(ctmax.plot), ggplotGrob(pbt.plot), ggplotGrob(ctmin.plot), size = "last"))
 dev.off()
+
+#STATS
+specs=c("M. boulderensis", "C. pellucida", "M. sanguinipes", "A. clavatus")
+pbt3= pbt[which(pbt$Spec %in% specs[4]),]
+
+mod.mass= lm(pbt3$mass ~ pbt3$elev) 
+summary(mod.mass)
+mod.ctmax= lm(pbt3$Ctmax ~ pbt3$elev) 
+summary(mod.ctmax)
+mod.PBT= lm(pbt3$PBT ~ pbt3$elev) 
+summary(mod.PBT)
+mod.ctmin= lm(pbt3$Ctmin ~ pbt3$elev) 
+summary(mod.ctmin)
+
+#CLINES
+#boulderensis: mass decrease
+#pellucida: CTmin decrease and tendency for PBT to decrease
+#sanguinipes: tendency for PBT to decrease
+#clavatus: mass decrease, tendency for Ctmax to decrease, PBT increase
 
 #-----------------------------
 #Egg plot
@@ -122,3 +146,4 @@ setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperGenetics\\fig
 pdf("egg_plot.pdf", height = 6, width = 8)
 grid::grid.draw(rbind(ggplotGrob(ov.plot), ggplotGrob(clutch.plot), ggplotGrob(egg.plot), size = "last"))
 dev.off()
+
