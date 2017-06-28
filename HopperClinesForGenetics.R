@@ -1,9 +1,13 @@
 library(ggplot2)
 library(plyr)
 library(dplyr)
+library(grid)
+
+fdir= "C:\\Users\\Buckley\\Google Drive\\Work\\GrasshopperGenetics\\"
 
 #READ DATA
-setwd("C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\TPCfield\\data")
+#setwd("C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\TPCfield\\data")
+setwd("C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\TPCfield\\data")
 
 hop= read.csv("HoppingData.csv")
 feed=  read.csv("FeedingData.csv")
@@ -20,7 +24,7 @@ elevs= c(1574, 2195, 2591, 3048, 3739)
 specs=c("M. boulderensis", "C. pellucida", "M. sanguinipes", "A. clavatus")
 
 count= function(x) length(na.omit(x))
-se= function(x) sd(x)#/sqrt(length(x))
+se= function(x) sd(x)/sqrt(length(x))
 
 #------------
 #HOPPING
@@ -36,13 +40,21 @@ hop2= hop %>% group_by(temp,elev,Species) %>% summarise(N= length(dist), dist=me
 
 #PLOT
 pd <- position_dodge(0.1)
-ggplot(data=hop2, aes(x=temp, y = dist,color=elev))+geom_point()+geom_line()+ 
+hop.plot=ggplot(data=hop2, aes(x=temp, y = dist,color=elev))+geom_point()+geom_line()+ 
   geom_errorbar(aes(ymin=dist-dist.se, ymax=dist+dist.se), width=.1, position=pd)+facet_wrap(~Species)+theme_bw()
 #, shape=Sex
 
 #FOR FITTING PERFORMANCE CURVES
 TPC.gaus= function(T, b, c){1/c*exp(-0.5*((T-b)/c)^2)}
 TPC.gausgomp= function(T, To, rho=0.9, sigma, Fmax) Fmax*exp(-exp(rho*(T-To)-6)-sigma*(T-To)^2) # rho and sigma determine, the thermal sensitivity of feeding at temperatures above and below Topt, respectively
+
+#PLOT
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperGenetics\\figures\\")
+
+#min ordinal date by dd, #plot regression
+pdf("hop_plot.pdf", height = 5, width = 10)
+hop.plot
+dev.off()
 
 #---------------------
 #FEEDING
@@ -62,18 +74,27 @@ feed2$Elev= as.factor(feed2$Elev)
 #group by Sex for now
 
 #PLOT
-ggplot(data=feed2, aes(x=Temp, y = Area_8hr_nomass,color=Elev, shape=Sex))+geom_point()+geom_line()+facet_wrap(~Species)+theme_bw()
+ggplot(data=feed2, aes(x=Temp, y = Area_8hr_nomass,color=Elev))+geom_point()+geom_line()+facet_wrap(~Species)+theme_bw()
 
 #---------------------
 #PBT
-pbt= pbt[pbt$Spec=="M. dodgei",]
 
 #group
-pbt2= pbt %>% group_by(elev,sex) %>% summarise(PBT=mean(PBT, na.rm=TRUE))
-pbt$elev= as.factor(pbt$elev)
+pbt2= pbt %>% group_by(elev,Spec) %>% summarise(PBT=mean(PBT, na.rm=TRUE), PBT.N= length(na.omit(PBT)),PBT.sd=sd(PBT, na.rm=TRUE), PBT.se=PBT.sd/sqrt(PBT.N), Ctmin=mean(Ctmin, na.rm=TRUE), Ctmin.N= length(na.omit(Ctmin)),Ctmin.sd=sd(Ctmin, na.rm=TRUE),Ctmin.se=Ctmin.sd/sqrt(Ctmin.N), Ctmax=mean(Ctmax, na.rm=TRUE), Ctmax.N= length(na.omit(Ctmax)),Ctmax.sd=sd(Ctmax, na.rm=TRUE), Ctmax.se=Ctmax.sd/sqrt(Ctmax.N))
 
 #PLOT
-ggplot(data=pbt2, aes(x=elev, y = PBT,color=elev, shape=sex))+geom_point()+geom_line()
+ctmax.plot= ggplot(data=pbt2, aes(x=elev, y = Ctmax, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+
+  theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())
+pbt.plot= ggplot(data=pbt2, aes(x=elev, y = PBT, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+
+  theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())
+ctmin.plot= ggplot(data=pbt2, aes(x=elev, y = Ctmin, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="bottom")
+
+#PLOT
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperGenetics\\figures\\")
+
+pdf("thermtol_plot.pdf", height = 6, width = 8)
+grid::grid.draw(rbind(ggplotGrob(ctmax.plot), ggplotGrob(pbt.plot), ggplotGrob(ctmin.plot), size = "last"))
+dev.off()
 
 #-----------------------------
 #Egg plot
@@ -83,12 +104,21 @@ sites1= c("RF", "A1", "B1", "C1", "D1")
 elevs= c(1574, 2195, 2591, 3048, 3739)
 egg$elev=elevs[match(egg$Site,sites1)]
 
-ggplot(data=egg, aes(x=elev, y = Novarioles,color=Species))+geom_point()+geom_line()+theme_bw()+ 
-  geom_errorbar(aes(ymin=Novarioles-Novarioles.se, ymax=Novarioles+Novarioles.se), width=.1)
+ov.plot=ggplot(data=egg, aes(x=elev, y = Novarioles,color=Species))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+ 
+  geom_errorbar(aes(ymin=Novarioles-Novarioles.se, ymax=Novarioles+Novarioles.se), width=.1)+
+  theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())
                 
-ggplot(data=egg, aes(x=elev, y = clutch,color=Species))+geom_point()+geom_line()+theme_bw()+ 
-  geom_errorbar(aes(ymin=clutch-clutch.se, ymax=clutch+clutch.se), width=.1)
+clutch.plot=ggplot(data=egg, aes(x=elev, y = clutch,color=Species))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+ 
+  geom_errorbar(aes(ymin=clutch-clutch.se, ymax=clutch+clutch.se), width=.1)+
+  theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
-pd <- position_dodge(0.1) # move them .05 to the left and right
-ggplot(data=egg, aes(x=elev, y = egg.mass,color=Species))+geom_point(position=pd)+geom_line(position=pd)+theme_bw()+ 
-  geom_errorbar(aes(ymin=egg.mass-egg.mass.se, ymax=egg.mass+egg.mass.se), width=.1, position=pd)
+position_dodge(0.1) # move them .05 to the left and right
+egg.plot= ggplot(data=egg, aes(x=elev, y = egg.mass,color=Species))+geom_point(position=pd)+geom_line(position=pd)+theme_bw()+ 
+  geom_errorbar(aes(ymin=egg.mass-egg.mass.se, ymax=egg.mass+egg.mass.se), width=.1, position=pd)+ theme(legend.position="bottom")
+
+#PLOT
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperGenetics\\figures\\")
+
+pdf("egg_plot.pdf", height = 6, width = 8)
+grid::grid.draw(rbind(ggplotGrob(ov.plot), ggplotGrob(clutch.plot), ggplotGrob(egg.plot), size = "last"))
+dev.off()
