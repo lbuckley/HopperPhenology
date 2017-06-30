@@ -186,13 +186,14 @@ po3= po3[which(!is.na(po3$value)),]
 po3= po3 %>% gather(key = elevs, value = elevation, -site, -year,-sp, -value,-site_year_sp)
 po3$year= as.factor(po3$year)
 
-phenoverlap.plot=ggplot(data=po3, aes(x=elevation, y = value, color=sp, group=site_year_sp))+geom_line(size=1)+theme_bw()+ylab("overlap") #linetype=year, 
+#change to abbrev species names
+po3$sp= gsub("Melanoplus", "M.", po3$sp)
+po3$sp= gsub("Aeropedellus", "A.", po3$sp)
+po3$sp= gsub("Camnula", "C.", po3$sp)
+po3$sp= as.factor(po3$sp)
 
 #plot
-setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperGenetics\\figures\\")
-pdf("PopPhenOverlap_Lines_NoLinetype.pdf", height = 6, width = 6)
-ggplot(data=po3, aes(x=elevation, y = value, color=sp, group=site_year_sp))+geom_line(size=1)+theme_bw()+ylab("overlap") #linetype=year, 
-dev.off()
+PopPhenOverlap=ggplot(data=po3, aes(x=elevation, y = value, color=sp, group=site_year_sp))+geom_line(size=1)+theme_bw()+ylab("Overlap")+xlab("Elevation (m)")+ theme(legend.position = 'right')+ labs(color="Species")  #linetype=year, 
 
 #===========================================
 #PLOT PHENOLOGY ACROSS ELEVATION
@@ -240,16 +241,16 @@ hop4.q80$quantile=85
 hop4.q20$quantile=15
 hop5= rbind(hop4.q80, hop4.q20)
 hop5$quantile= as.factor(hop5$quantile)
-hop5$yr_q= paste(hop.qs1$year, hop.qs1$q, sep="_")
+hop5$yr_q= paste(hop5$year, hop5$quantile, sep="_")
 hop5$year= as.factor(hop5$year)
 
-doyq.plot= ggplot(data=hop5, aes(x=elev, y = ordinal, color=year, linetype=quantile, group=yr_q))+facet_wrap(~species, nrow=2)+theme_bw()+ylab("doy")+geom_line(lwd=1)
+#change to abbrev species names
+hop5$species= gsub("Melanoplus", "M.", hop5$species)
+hop5$species= gsub("Aeropedellus", "A.", hop5$species)
+hop5$species= gsub("Camnula", "C.", hop5$species)
+hop5$species= as.factor(hop5$species)
 
-#PLOT
-setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperGenetics\\figures\\")
-pdf("DOY_byElev.pdf", height = 10, width = 10)
-doyq.plot
-dev.off()
+doyq.plot= ggplot(data=hop5, aes(x=elev, y = ordinal, color=year, linetype=quantile, group=yr_q))+facet_wrap(~species, nrow=2)+theme_bw()+ylab("Day of Year")+geom_line(lwd=1)+xlab("Elevation (m)")
 
 #---------------------
 #First & last
@@ -262,3 +263,14 @@ ggplot(data=seas, aes(x=elev, y = first, color=year, group=year))+facet_wrap(~sp
 ggplot(data=seas, aes(x=elev, y = last, color=year, group=year))+facet_wrap(~species, ncol=2)+theme_bw()+ylab("first doy")+geom_line(lwd=1)
 
 #=======================================================
+#PHENOLOGY PLOT
+
+lay <- matrix(c(1,2),ncol=2)
+
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperGenetics\\figures\\")
+pdf("phenlogy_plot.pdf", height = 8, width = 10)
+grid.arrange(PopPhenOverlap, doyq.plot,layout_matrix=lay, widths = c(0.7,1))
+dev.off()
+
+
+
