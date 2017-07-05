@@ -40,7 +40,7 @@ hop$Species= gsub("pellucida", "C. pellucida", hop$Species)
 hop$Species= gsub("sanguinipes", "M. sanguinipes", hop$Species)
 
 #return to factors
-hop$Species= as.factor(hop$Species)
+hop$Species= factor(hop$Species, levels=c("M. boulderensis","C. pellucida", "M. sanguinipes") )
 feed$Species= as.factor(feed$Species)
 pbt$Spec= as.factor(pbt$Spec) 
 repro$Species= as.factor(repro$Species) 
@@ -62,26 +62,18 @@ hop$dist =hop$dist*0.3048
 hop$elev= as.factor(hop$elev)
 
 #group
-hop2= hop %>% group_by(temp,elev,Species) %>% summarise(N= length(dist), dist=mean(dist), Mass=mean(Mass), FemurLength=mean(FemurLength), dist.sd=sd(dist), dist.se = dist.sd / sqrt(N))
+hop2= hop %>% group_by(temp,elev,Species) %>% summarise(N= length(dist), dist.m=mean(dist), Mass.m=mean(Mass), FemurLength=mean(FemurLength), dist.sd=sd(dist), dist.se = dist.sd / sqrt(N))
 #average over sex for now
 
 #PLOT
 pd <- position_dodge(0.1)
-hop.plot=ggplot(data=hop2, aes(x=temp, y = dist,color=elev))+geom_point()+geom_line()+ 
-  geom_errorbar(aes(ymin=dist-dist.se, ymax=dist+dist.se), width=.1, position=pd)+facet_wrap(~Species)+theme_bw()+xlab("Temperature (°C)")+ylab("Hop distance (m)")+ labs(color="Elevation (m)") 
+hop.plot=ggplot(data=hop2, aes(x=temp, y = dist.m,color=elev))+geom_point()+geom_line()+ 
+  geom_errorbar(aes(ymin=dist.m-dist.se, ymax=dist.m+dist.se), width=.1, position=pd)+facet_wrap(~Species)+theme_bw()+xlab("Temperature (°C)")+ylab("Hop distance (m)")+ labs(color="Elevation (m)") 
 #, shape=Sex
 
 #FOR FITTING PERFORMANCE CURVES
-TPC.gaus= function(T, b, c){1/c*exp(-0.5*((T-b)/c)^2)}
-TPC.gausgomp= function(T, To, rho=0.9, sigma, Fmax) Fmax*exp(-exp(rho*(T-To)-6)-sigma*(T-To)^2) # rho and sigma determine, the thermal sensitivity of feeding at temperatures above and below Topt, respectively
-
-#PLOT
-setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperGenetics\\figures\\")
-
-#min ordinal date by dd, #plot regression
-pdf("hop_plot.pdf", height = 5, width = 10)
-hop.plot
-dev.off()
+#TPC.gaus= function(T, b, c){1/c*exp(-0.5*((T-b)/c)^2)}
+#TPC.gausgomp= function(T, To, rho=0.9, sigma, Fmax) Fmax*exp(-exp(rho*(T-To)-6)-sigma*(T-To)^2) # rho and sigma determine, the thermal sensitivity of feeding at temperatures above and below Topt, respectively
 
 #---------------------
 #FEEDING
@@ -107,26 +99,26 @@ ggplot(data=feed2, aes(x=Temp, y = Area_8hr_nomass,color=Elev))+geom_point()+geo
 #PBT
 
 #group
-pbt2= pbt %>% group_by(elev,Spec) %>% summarise(PBT=mean(PBT, na.rm=TRUE), PBT.N= length(na.omit(PBT)),PBT.sd=sd(PBT, na.rm=TRUE), PBT.se=PBT.sd/sqrt(PBT.N), Ctmin=mean(Ctmin, na.rm=TRUE), Ctmin.N= length(na.omit(Ctmin)),Ctmin.sd=sd(Ctmin, na.rm=TRUE),Ctmin.se=Ctmin.sd/sqrt(Ctmin.N), Ctmax=mean(Ctmax, na.rm=TRUE), Ctmax.N= length(na.omit(Ctmax)),Ctmax.sd=sd(Ctmax, na.rm=TRUE), Ctmax.se=Ctmax.sd/sqrt(Ctmax.N), mass=mean(mass_g, na.rm=TRUE), mass.N= length(na.omit(mass_g)),mass.sd=sd(mass_g, na.rm=TRUE), mass.se=mass.sd/sqrt(mass.N))
+pbt2= pbt %>% group_by(elev,Spec) %>% summarise(PBT.m=mean(PBT, na.rm=TRUE), PBT.N= length(na.omit(PBT)),PBT.sd=sd(PBT, na.rm=TRUE), PBT.se=PBT.sd/sqrt(PBT.N), Ctmin.m=mean(Ctmin, na.rm=TRUE), Ctmin.N= length(na.omit(Ctmin)),Ctmin.sd=sd(Ctmin, na.rm=TRUE),Ctmin.se=Ctmin.sd/sqrt(Ctmin.N), Ctmax.m=mean(Ctmax, na.rm=TRUE), Ctmax.N= length(na.omit(Ctmax)),Ctmax.sd=sd(Ctmax, na.rm=TRUE), Ctmax.se=Ctmax.sd/sqrt(Ctmax.N), mass.m=mean(mass_g, na.rm=TRUE), mass.N= length(na.omit(mass_g)),mass.sd=sd(mass_g, na.rm=TRUE), mass.se=mass.sd/sqrt(mass.N))
 
 #PLOT
-ctmax.plot= ggplot(data=pbt2, aes(x=elev, y = Ctmax, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+
-  theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())+ylab("CTmax (°C)")
+ctmax.plot= ggplot(data=pbt2, aes(x=elev, y = Ctmax.m, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+
+  theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())+ylab("CTmax (°C)")+ 
+  geom_errorbar(aes(ymin=Ctmax.m-Ctmax.se, ymax=Ctmax.m+Ctmax.se), width=.1, position=pd) +xlim(1550,3530)
 
-pbt.plot= ggplot(data=pbt2, aes(x=elev, y = PBT, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+
-  theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())
+pbt.plot= ggplot(data=pbt2, aes(x=elev, y = PBT.m, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+
+  theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())+ 
+  geom_errorbar(aes(ymin=PBT.m-PBT.se, ymax=PBT.m+PBT.se), width=.1, position=pd)
 
-ctmin.plot= ggplot(data=pbt2, aes(x=elev, y = Ctmin, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="bottom")+xlab("Elevation (m)")+ylab("CTmin (°C)")+ labs(color="Species") 
+ctmin.plot= ggplot(data=pbt2, aes(x=elev, y = Ctmin.m, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="bottom")+xlab("Elevation (m)")+ylab("CTmin (°C)")+ labs(color="Species") + 
+  geom_errorbar(aes(ymin=Ctmin.m-Ctmin.se, ymax=Ctmin.m+Ctmin.se), width=.1, position=pd) +xlim(1550,3530)
 
-mass.plot= ggplot(data=pbt2, aes(x=elev, y = mass, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="bottom")+ 
-  geom_errorbar(aes(ymin=mass-mass.se, ymax=mass+mass.se), width=.1, position=pd)
+mass.plot= ggplot(data=pbt2, aes(x=elev, y = mass.m, color=Spec))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="bottom")+ 
+  geom_errorbar(aes(ymin=mass.m-mass.se, ymax=mass.m+mass.se), width=.1, position=pd)
 
 #PLOT
 setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperGenetics\\figures\\")
-
-pdf("thermtol_plot.pdf", height = 6, width = 8)
 grid::grid.draw(rbind(ggplotGrob(ctmax.plot), ggplotGrob(pbt.plot), ggplotGrob(ctmin.plot), size = "last"))
-dev.off()
 
 #STATS
 specs=c("M. boulderensis", "C. pellucida", "M. sanguinipes", "A. clavatus")
@@ -156,7 +148,7 @@ size2= size %>% group_by(Site,Elevation, Species) %>% summarise(length=mean(Mean
 
 size.plot= ggplot(data=size2, aes(x=Elevation, y = length, color=Species))+geom_point()+geom_line()+theme_bw()+ 
   geom_errorbar(aes(ymin=length-length.se, ymax=length+length.se), width=.1)+ theme(legend.position="none")+ylab("Femur length (mm)")+
-  theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())
+  theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank()) +xlim(1550,3530)
 
 #STATS
 specs=c("M. boulderensis", "C. pellucida", "M. sanguinipes", "A. clavatus")
@@ -183,13 +175,13 @@ ov.plot=ggplot(data=repro2, aes(x=Elevation, y = Novarioles,color=Species))+geom
 clutch.plot=ggplot(data=repro2, aes(x=Elevation, y = clutch,color=Species))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+ 
   geom_errorbar(aes(ymin=clutch-clutch.se, ymax=clutch+clutch.se), width=.1)
 
-egg.mass.plot=ggplot(data=repro2, aes(x=Elevation, y = egg.mass*1000,color=Species))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+ 
+egg.mass.plot=ggplot(data=repro2, aes(x=Elevation, y = egg.mass*1000,color=Species))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+ xlim(1550,3530)+
   geom_errorbar(aes(ymin=egg.mass-egg.mass.se, ymax=egg.mass+egg.mass.se), width=.1)+ylab("Egg mass (mg)")+ theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
-clutch.mass.plot=ggplot(data=repro2, aes(x=Elevation, y = clutch.mass,color=Species))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+ 
+clutch.mass.plot=ggplot(data=repro2, aes(x=Elevation, y = clutch.mass,color=Species))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+ xlim(1550,3530)+
   geom_errorbar(aes(ymin=clutch.mass-clutch.mass.se, ymax=clutch.mass+clutch.mass.se), width=.1)+ylab("Clutch mass (g)")+xlab("Elevation (m)")
 
-Fov.plot=ggplot(data=repro2, aes(x=Elevation, y = NFovarioles,color=Species))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+ 
+Fov.plot=ggplot(data=repro2, aes(x=Elevation, y = NFovarioles,color=Species))+geom_point()+geom_line()+theme_bw()+ theme(legend.position="none")+ xlim(1550,3530)+
   geom_errorbar(aes(ymin=NFovarioles-NFovarioles.se, ymax=NFovarioles+NFovarioles.se), width=.1)+
   theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())+ylab("N functional ovarioles")
 
@@ -226,16 +218,9 @@ summary(mod.clutch.mass)
 #=====================================
 #PHENOTYPE FIG
 
-#Length
-#CTmax
-#CTmin
-
-#FOV
-#Egg.mass
-#Clutch.mass
-
+#Length, CTmax, CTmin
+#FOV, Egg.mass, Clutch.mass
 #TPC
-
 
 lay <- rbind(c(1,4),
              c(2,5),
@@ -253,8 +238,20 @@ g_legend<-function(a.gplot){
 
 legend <- g_legend(ctmin.plot)
 
+#align axes
+#Fov.plot, egg.mass.plot, clutch.mass.plot
+gFov <- ggplotGrob(Fov.plot)
+gegg.mass <- ggplotGrob(egg.mass.plot)
+gclutch.mass <- ggplotGrob(clutch.mass.plot)
+maxWidth = grid::unit.pmax(gFov$widths[2:5], gegg.mass$widths[2:5], gclutch.mass$widths[2:5])
+gFov$widths[2:5] <- as.list(maxWidth)
+gegg.mass$widths[2:5] <- as.list(maxWidth)
+gclutch.mass$widths[2:5] <- as.list(maxWidth)
+
 setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperGenetics\\figures\\")
 pdf("phenotype_plot.pdf", height = 10, width = 8)
-grid.arrange(size.plot, ctmax.plot, ctmin.plot+ theme(legend.position = 'none'), Fov.plot, egg.mass.plot, clutch.mass.plot, legend, hop.plot, layout_matrix = lay, widths = c(1,1), 
-             heights=c(0.5,0.5,0.5,0.1,1))
+
+grid.arrange(size.plot, ctmax.plot, ctmin.plot+ theme(legend.position = 'none'), gFov, gegg.mass, gclutch.mass, legend, hop.plot, layout_matrix = lay, widths = c(1,1), 
+             heights=c(0.4,0.4,0.5,0.1,1))
+
 dev.off()

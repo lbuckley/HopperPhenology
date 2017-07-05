@@ -195,6 +195,21 @@ po3$sp= as.factor(po3$sp)
 #plot
 PopPhenOverlap=ggplot(data=po3, aes(x=elevation, y = value, color=sp, group=site_year_sp))+geom_line(size=1)+theme_bw()+ylab("Overlap")+xlab("Elevation (m)")+ theme(legend.position = 'right')+ labs(color="Species")  #linetype=year, 
 
+#----------------
+#STATS
+mod1= lm(value~sp+year, data=po3)
+summary(mod1)
+anova(mod1) 
+
+#average and difference elevation
+po4= po2[which(!is.na(po2$value)),]
+po4$elev.d= abs(po4$elev1-po4$elev2)
+po4$elev.m= (po4$elev1+po4$elev2)/2
+
+mod1= lm(value~sp+elev.d+year, data=po4)
+mod1= lm(value~sp+elev.m+year, data=po4)
+summary(mod1)
+
 #===========================================
 #PLOT PHENOLOGY ACROSS ELEVATION
 
@@ -225,6 +240,9 @@ hop4.q20= do.call(rbind,lapply(split(hop3,list(hop3$species, hop3$site, hop3$yea
 hop4.q80= do.call(rbind,lapply(split(hop3,list(hop3$species, hop3$site, hop3$year)),function(chunk) chunk[which.min(chunk$inddif.q80),]))
 
 #add elevation
+sites= c("CHA", "A1", "B1", "C1", "D1")  #Redfox: 1574
+elevs= c(1752, 2195, 2591, 3048, 3739)
+
 match1= match(hop4$site, sites)
 hop4$elev= elevs[match1]
 match1= match(hop4.q20$site, sites)
@@ -251,6 +269,14 @@ hop5$species= gsub("Camnula", "C.", hop5$species)
 hop5$species= as.factor(hop5$species)
 
 doyq.plot= ggplot(data=hop5, aes(x=elev, y = ordinal, color=year, linetype=quantile, group=yr_q))+facet_wrap(~species, nrow=2)+theme_bw()+ylab("Day of Year")+geom_line(lwd=1)+xlab("Elevation (m)")
+
+#----------------------
+#STATS
+
+hop6= hop5[which(hop5$quantile==85),c(3,5,15,31:37)]
+mod1= lm(ordinal~elev*species+year, data=hop6)
+summary(mod1)
+anova(mod1)
 
 #---------------------
 #First & last
