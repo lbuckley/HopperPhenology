@@ -9,6 +9,7 @@ library(gridExtra)
 library(lme4)
 library(nlme)
 library(grDevices)
+library(akima) #for interpolation
 
 #Elev for A1  B1  C1  CHA
 sites= c("A1", "B1", "C1", "CHA")
@@ -24,6 +25,7 @@ count= function(x){
 
 #--------------------------------------
 fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
+#fdir= "C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
 
 #load climate data
 setwd( paste(fdir, "climate", sep="") )   
@@ -175,8 +177,75 @@ di.plot= ggplot(data=dat, aes(x=ordinal, y = DI, color=per))+facet_grid(species~
 
 #Plot DI by GDD
 dat$cdd= dat$cdd_sum
-di.plot= ggplot(data=dat, aes(x=cdd, y = DI, color=per))+facet_grid(species~elev) +geom_point(aes(shape=period), size=2)+theme_bw()+geom_line()+xlim(0,600)
+di.plot= ggplot(data=dat, aes(x=cdd, y = DI, color=per))+facet_grid(species~elev) +geom_point(aes(shape=period), size=2)+theme_bw()+xlim(0,600)+ylim(1,6)+geom_line() #+geom_smooth(method="loess",se=F)
 #note xlim restricted
+
+#PLOT
+setwd("C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\figures\\")
+pdf("DIplot.pdf",height = 10, width = 10)
+di.plot
+dev.off()
+
+#-----------------
+#SURFACE PLOT
+
+#Add seasonal cdd
+dat$sy=paste(dat$site, dat$year,sep="_")
+match1= match(dat$sy, clim.seas$sy)
+dat$dd.seas= NA
+dat$dd.seas= clim.seas[match1,"dd.seas"]
+### FIX
+
+#--------
+
+#Interpolate
+dat1=na.omit(dat)
+dat1$elev= as.numeric(as.character(dat1$elev))
+dat1$per= as.factor(dat1$per)
+
+#split by species
+dat.mb= dat1[which(dat1$species=="Melanoplus boulderensis"),]
+s=interp(x=dat.mb$cdd,y=dat.mb$elev,z=dat.mb$DI, duplicate="mean", yo=c(1752,2195,2591,3048))
+s=interp(x=dat.mb$cdd,y=dat.mb$per,z=dat.mb$DI, duplicate="mean", yo=c("initial","cold","med","warm"))
+gdat.mb <- interp2xyz(s, data.frame=TRUE)
+
+dat.cp= dat1[which(dat1$species=="Camnula pellucida"),]
+s=interp(x=dat.cp$cdd,y=dat.cp$elev,z=dat.cp$DI, duplicate="mean", yo=c(1752,2195,2591,3048))
+gdat.cp <- interp2xyz(s, data.frame=TRUE)
+
+dat.ms= dat1[which(dat1$species=="Melanoplus sanguinipes"),]
+s=interp(x=dat.ms$cdd,y=dat.ms$elev,z=dat.ms$DI, duplicate="mean", yo=c(1752,2195,2591,3048))
+gdat.ms <- interp2xyz(s, data.frame=TRUE)
+
+dat.md= dat1[which(dat1$species=="Melanoplus dawsoni"),]
+s=interp(x=dat.md$cdd,y=dat.md$elev,z=dat.md$DI, duplicate="mean", yo=c(1752,2195,2591,3048))
+gdat.md <- interp2xyz(s, data.frame=TRUE)
+
+#plot
+plot.di.mb= ggplot(gdat.mb) + 
+  aes(x = x, y = y, z = z, fill = z) + 
+  geom_tile() + 
+  scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
+  theme_bw(base_size=16)+xlab("cdd")+ylab("elevation (m)")+theme(legend.position="bottom")#+annotate("text", x=1,y=3000, label= "1951-1980", size=5)
+
+plot.di.cp= ggplot(gdat.cp) + 
+  aes(x = x, y = y, z = z, fill = z) + 
+  geom_tile() + 
+  scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
+  theme_bw(base_size=16)+xlab("cdd")+ylab("elevation (m)")+theme(legend.position="bottom")
+
+plot.di.md= ggplot(gdat.md) + 
+  aes(x = x, y = y, z = z, fill = z) + 
+  geom_tile() + 
+  scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
+  theme_bw(base_size=16)+xlab("cdd")+ylab("elevation (m)")+theme(legend.position="bottom")
+
+plot.di.ms= ggplot(gdat.ms) + 
+  aes(x = x, y = y, z = z, fill = z) + 
+  geom_tile() + 
+  scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
+  theme_bw(base_size=16)+xlab("cdd")+ylab("elevation (m)")+theme(legend.position="bottom")
+
 
 #==========================================================================
 #Composition plot
