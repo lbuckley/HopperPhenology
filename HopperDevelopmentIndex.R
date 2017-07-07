@@ -147,9 +147,6 @@ ggplot(data=clim.seas,aes(x=Year, y = dd.seas, color=Site)) + geom_point()+geom_
 #group by seasonal GDD
 #drop sites without data
 clim.seas2= clim.seas
-clim.seas2= clim.seas[-which(clim.seas$Site %in% c("A1")),]
-clim.seas2= clim.seas[-which(clim.seas$Site %in% c("A1","CHA")),]
-
 clim.seas2= clim.seas2 %>% group_by(Year) %>% summarise(dd.seas= mean(dd.seas) )
 clim.seas2= clim.seas2[order(clim.seas2$dd.seas),]
 
@@ -182,12 +179,6 @@ dat$cdd= dat$cdd_sum
 di.plot= ggplot(data=dat, aes(x=cdd, y = DI, color=per))+facet_grid(species~elev) +geom_point(aes(shape=period), size=2)+theme_bw()+xlim(0,600)+ylim(1,6)+geom_line() #+geom_smooth(method="loess",se=F)
 #note xlim restricted
 
-#PLOT
-setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\figures\\")
-pdf("DIplot.pdf",height = 10, width = 10)
-di.plot
-dev.off()
-
 #-----------------
 #SURFACE PLOT
 
@@ -206,64 +197,64 @@ dat1=na.omit(dat)
 dat.mb= dat1[which(dat1$species=="Melanoplus boulderensis"),]
 
 dat.e=  dat.mb[which(dat.mb$elev==2195),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.mb.2195 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.mb[which(dat.mb$elev==2591),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.mb.2591 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.mb[which(dat.mb$elev==3048),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.mb.3048 <- interp2xyz(s, data.frame=TRUE)
 
 #--------------------------
 dat.cp= dat1[which(dat1$species=="Camnula pellucida"),]
 
 dat.e=  dat.cp[which(dat.cp$elev==2195),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.cp.2195 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.cp[which(dat.cp$elev==2591),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.cp.2591 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.cp[which(dat.cp$elev==3048),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.cp.3048 <- interp2xyz(s, data.frame=TRUE)
 
 #--------------------------
 dat.ms= dat1[which(dat1$species=="Melanoplus sanguinipes"),]
 
 dat.e=  dat.ms[which(dat.ms$elev==1752),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.ms.1752 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.ms[which(dat.ms$elev==2195),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.ms.2195 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.ms[which(dat.ms$elev==2591),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.ms.2591 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.ms[which(dat.ms$elev==3048),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.ms.3048 <- interp2xyz(s, data.frame=TRUE)
 
 #--------------------------
 dat.md= dat1[which(dat1$species=="Melanoplus dawsoni"),]
 
 dat.e=  dat.md[which(dat.md$elev==1752),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.md.1752 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.md[which(dat.md$elev==2195),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.md.2195 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.md[which(dat.md$elev==2591),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.md.2591 <- interp2xyz(s, data.frame=TRUE)
 
 #--------------------------
@@ -359,11 +350,14 @@ blank <- grid.rect(gp=gpar(col="white"))
 
 di.plot <- grid.arrange(blank, plot.di.mb.2195, plot.di.mb.2591, plot.di.mb.3048, blank,plot.di.cp.2195, plot.di.cp.2591, plot.di.cp.3048,plot.di.ms.1752,plot.di.ms.2195, plot.di.ms.2591, plot.di.ms.3048,plot.di.md.1752,plot.di.md.2195, plot.di.md.2591, nrow=4)
 
+## FIGURE 3
 #PLOT
 setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\figures\\")
 pdf("DIplot.pdf",height = 12, width = 12)
 plot(di.plot)
 dev.off()
+
+#STAT
 
 #==========================================================================
 #Composition plot
@@ -411,5 +405,14 @@ dat.t1$per[which(dat.t1$year %in% c(2006,2007,2012) )]="warm"
 #PLOT
 dat.t3= subset(dat.t1, dat.t1$site=="B1")
 dat.t3$GDDs_binned= gdds[dat.t3$gdd.bin]
+dat.t3$per= factor(dat.t3$per, levels=c("initial","cold","med","warm") )
+dat.t3$species= factor(dat.t3$species, levels=c("Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes","Melanoplus dawsoni") )
 
-g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(species~year)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)
+g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(species~per)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)
+
+## FIGURE SX. Composition
+#PLOT
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\figures\\")
+pdf("CompositionPlot.pdf",height = 12, width = 12)
+plot(g1)
+dev.off()

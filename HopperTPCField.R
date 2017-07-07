@@ -4,6 +4,7 @@ library(dplyr)
 
 #READ DATA
 setwd("C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\TPCfield\\data")
+#setwd("C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\TPCfield\\data")
 
 hop= read.csv("HoppingData.csv")
 feed=  read.csv("FeedingData.csv")
