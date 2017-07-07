@@ -10,6 +10,8 @@ library(lme4)
 library(nlme)
 library(grDevices)
 library(akima) #for interpolation
+library(grid)
+library(gridExtra)
 
 #Elev for A1  B1  C1  CHA
 sites= c("A1", "B1", "C1", "CHA")
@@ -181,7 +183,7 @@ di.plot= ggplot(data=dat, aes(x=cdd, y = DI, color=per))+facet_grid(species~elev
 #note xlim restricted
 
 #PLOT
-setwd("C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\figures\\")
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\figures\\")
 pdf("DIplot.pdf",height = 10, width = 10)
 di.plot
 dev.off()
@@ -193,59 +195,175 @@ dev.off()
 dat$sy=paste(dat$site, dat$year,sep="_")
 match1= match(dat$sy, clim.seas$sy)
 dat$dd.seas= NA
-dat$dd.seas= clim.seas[match1,"dd.seas"]
-### FIX
+dat$dd.seas= unlist(clim.seas[match1,"dd.seas"])
 
 #--------
 
 #Interpolate
 dat1=na.omit(dat)
-dat1$elev= as.numeric(as.character(dat1$elev))
-dat1$per= as.factor(dat1$per)
 
-#split by species
+#split by species and elevation
 dat.mb= dat1[which(dat1$species=="Melanoplus boulderensis"),]
-s=interp(x=dat.mb$cdd,y=dat.mb$elev,z=dat.mb$DI, duplicate="mean", yo=c(1752,2195,2591,3048))
-s=interp(x=dat.mb$cdd,y=dat.mb$per,z=dat.mb$DI, duplicate="mean", yo=c("initial","cold","med","warm"))
-gdat.mb <- interp2xyz(s, data.frame=TRUE)
 
+dat.e=  dat.mb[which(dat.mb$elev==2195),]
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+gdat.mb.2195 <- interp2xyz(s, data.frame=TRUE)
+
+dat.e=  dat.mb[which(dat.mb$elev==2591),]
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+gdat.mb.2591 <- interp2xyz(s, data.frame=TRUE)
+
+dat.e=  dat.mb[which(dat.mb$elev==3048),]
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+gdat.mb.3048 <- interp2xyz(s, data.frame=TRUE)
+
+#--------------------------
 dat.cp= dat1[which(dat1$species=="Camnula pellucida"),]
-s=interp(x=dat.cp$cdd,y=dat.cp$elev,z=dat.cp$DI, duplicate="mean", yo=c(1752,2195,2591,3048))
-gdat.cp <- interp2xyz(s, data.frame=TRUE)
 
+dat.e=  dat.cp[which(dat.cp$elev==2195),]
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+gdat.cp.2195 <- interp2xyz(s, data.frame=TRUE)
+
+dat.e=  dat.cp[which(dat.cp$elev==2591),]
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+gdat.cp.2591 <- interp2xyz(s, data.frame=TRUE)
+
+dat.e=  dat.cp[which(dat.cp$elev==3048),]
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+gdat.cp.3048 <- interp2xyz(s, data.frame=TRUE)
+
+#--------------------------
 dat.ms= dat1[which(dat1$species=="Melanoplus sanguinipes"),]
-s=interp(x=dat.ms$cdd,y=dat.ms$elev,z=dat.ms$DI, duplicate="mean", yo=c(1752,2195,2591,3048))
-gdat.ms <- interp2xyz(s, data.frame=TRUE)
 
+dat.e=  dat.ms[which(dat.ms$elev==1752),]
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+gdat.ms.1752 <- interp2xyz(s, data.frame=TRUE)
+
+dat.e=  dat.ms[which(dat.ms$elev==2195),]
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+gdat.ms.2195 <- interp2xyz(s, data.frame=TRUE)
+
+dat.e=  dat.ms[which(dat.ms$elev==2591),]
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+gdat.ms.2591 <- interp2xyz(s, data.frame=TRUE)
+
+dat.e=  dat.ms[which(dat.ms$elev==3048),]
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+gdat.ms.3048 <- interp2xyz(s, data.frame=TRUE)
+
+#--------------------------
 dat.md= dat1[which(dat1$species=="Melanoplus dawsoni"),]
-s=interp(x=dat.md$cdd,y=dat.md$elev,z=dat.md$DI, duplicate="mean", yo=c(1752,2195,2591,3048))
-gdat.md <- interp2xyz(s, data.frame=TRUE)
 
+dat.e=  dat.md[which(dat.md$elev==1752),]
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+gdat.md.1752 <- interp2xyz(s, data.frame=TRUE)
+
+dat.e=  dat.md[which(dat.md$elev==2195),]
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+gdat.md.2195 <- interp2xyz(s, data.frame=TRUE)
+
+dat.e=  dat.md[which(dat.md$elev==2591),]
+s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean")
+gdat.md.2591 <- interp2xyz(s, data.frame=TRUE)
+
+#--------------------------
 #plot
-plot.di.mb= ggplot(gdat.mb) + 
+#mb
+plot.di.mb.2195= ggplot(gdat.mb.2195) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("cdd")+ylab("elevation (m)")+theme(legend.position="bottom")#+annotate("text", x=1,y=3000, label= "1951-1980", size=5)
+  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "mb 2195m", size=5)
 
-plot.di.cp= ggplot(gdat.cp) + 
+plot.di.mb.2591= ggplot(gdat.mb.2591) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("cdd")+ylab("elevation (m)")+theme(legend.position="bottom")
+  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "mb 2591", size=5)
 
-plot.di.md= ggplot(gdat.md) + 
+plot.di.mb.3048= ggplot(gdat.mb.3048) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("cdd")+ylab("elevation (m)")+theme(legend.position="bottom")
+  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=200, label= "mb 3048", size=5)
 
-plot.di.ms= ggplot(gdat.ms) + 
+#------------
+#cp
+plot.di.cp.2195= ggplot(gdat.cp.2195) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("cdd")+ylab("elevation (m)")+theme(legend.position="bottom")
+  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "cp 2195m", size=5)
 
+plot.di.cp.2591= ggplot(gdat.cp.2591) + 
+  aes(x = x, y = y, z = z, fill = z) + 
+  geom_tile() + 
+  scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
+  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "cp 2591m", size=5)
+
+plot.di.cp.3048= ggplot(gdat.cp.3048) + 
+  aes(x = x, y = y, z = z, fill = z) + 
+  geom_tile() + 
+  scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
+  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=200, label= "cp 3048m", size=5)
+
+#------------
+#ms
+plot.di.ms.1752= ggplot(gdat.ms.1752) + 
+  aes(x = x, y = y, z = z, fill = z) + 
+  geom_tile() + 
+  scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
+  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=1000, label= "ms 1752m", size=5)
+
+plot.di.ms.2195= ggplot(gdat.ms.2195) + 
+  aes(x = x, y = y, z = z, fill = z) + 
+  geom_tile() + 
+  scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
+  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "ms 2195m", size=5)
+
+plot.di.ms.2591= ggplot(gdat.ms.2591) + 
+  aes(x = x, y = y, z = z, fill = z) + 
+  geom_tile() + 
+  scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
+  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "ms 2591m", size=5)
+
+plot.di.ms.3048= ggplot(gdat.ms.3048) + 
+  aes(x = x, y = y, z = z, fill = z) + 
+  geom_tile() + 
+  scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
+  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=200, label= "ms 3048m", size=5)
+
+#------------
+#md
+plot.di.md.1752= ggplot(gdat.md.1752) + 
+  aes(x = x, y = y, z = z, fill = z) + 
+  geom_tile() + 
+  scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
+  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=1000, label= "md 1752m", size=5)
+
+plot.di.md.2195= ggplot(gdat.md.2195) + 
+  aes(x = x, y = y, z = z, fill = z) + 
+  geom_tile() + 
+  scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
+  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "md 2195m", size=5)
+
+plot.di.md.2591= ggplot(gdat.md.2591) + 
+  aes(x = x, y = y, z = z, fill = z) + 
+  geom_tile() + 
+  scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
+  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "md 2591m", size=5)
+
+#-------------------
+#PLOT
+blank <- grid.rect(gp=gpar(col="white"))
+
+di.plot <- grid.arrange(blank, plot.di.mb.2195, plot.di.mb.2591, plot.di.mb.3048, blank,plot.di.cp.2195, plot.di.cp.2591, plot.di.cp.3048,plot.di.ms.1752,plot.di.ms.2195, plot.di.ms.2591, plot.di.ms.3048,plot.di.md.1752,plot.di.md.2195, plot.di.md.2591, nrow=4)
+
+#PLOT
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\figures\\")
+pdf("DIplot.pdf",height = 12, width = 12)
+plot(di.plot)
+dev.off()
 
 #==========================================================================
 #Composition plot
@@ -295,78 +413,3 @@ dat.t3= subset(dat.t1, dat.t1$site=="B1")
 dat.t3$GDDs_binned= gdds[dat.t3$gdd.bin]
 
 g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(species~year)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)
-
-#=======================================
-#Just boulderensis
-
-dat.t3= subset(dat.t1, dat.t1$species=="Melanoplus boulderensis")
-dat.t3$GDDs_binned= gdds[dat.t3$gdd.bin]
-
-#--------------
-
-g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(site~year, scales = "free_x")+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+xlim(0,300)
-
-#--------------------
-#split by site
-dat.b1= subset(dat.t3, dat.t3$site %in% c("B1") )
-
-g.b1= ggplot(data=dat.b1) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(.~year)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+xlim(0,300)
-
-#by GDD
-ggplot(data=dat.b1) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(.~dd.seas)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+xlim(0,300)
-
-#--------------------
-dat.c1= subset(dat.t3, dat.t3$site %in% c("C1") )
-
-g.c1= ggplot(data=dat.c1) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(.~year)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+xlim(0,150)
-
-#by GDD
-ggplot(data=dat.c1) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(.~dd.seas)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+xlim(0,150)
-
-#------------------
-# AVERAGE ACROSS PERIODS
-dat.per= dat.t3 %>% group_by(species, site, per, gdd.bin) %>% summarise(in6.cper=mean(in6.cper), in5.cper=mean(in5.cper), in4.cper=mean(in4.cper), in3.cper=mean(in3.cper), in2.cper=mean(in2.cper), in1.cper=mean(in1.cper), GDDs_binned=mean(GDDs_binned) )
-  
-#order by period
-dat.per$per= factor(dat.per$per,levels=c("initial","cold","med","warm"), ordered=TRUE)
-
-g1= ggplot(data=dat.per) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in4.cper, color="in4")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(site~per, scales = "free_x")+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in4.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in4.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+xlim(0,300)+ylab("proportional composition")
-
-#----------------------
-#PLOT
-setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\DevelopInd\\")
-file<-paste("Composition_boulderensis.pdf" ,sep="", collapse=NULL)
-pdf(file,height = 10, width = 10)
-g1
-dev.off()
-
-#--------------------
-#DEVELOPMENTAL INDEX
-#Plot DI by ordinal date
-
-dat.b= subset(dat, dat$species %in% c("Melanoplus boulderensis") ) 
-
-# AVERAGE ACROSS PERIODS
-dat.bper= dat.b %>% group_by(site, elev, per, date.bin) %>% summarise(DI=mean(DI), ordinal=mean(ordinal) )
-#order by period
-dat.bper$per= factor(dat.bper$per,levels=c("initial","cold","med","warm"), ordered=TRUE)
-
-#plot by date bin
-di.plot.date= ggplot(data=dat.bper, aes(x=ordinal, y = DI, color=per))+facet_grid(site~.) +theme_bw()+geom_line(size=2)+xlim(140,220)
-
-#by GDD bin
-dat.bper= dat.b %>% group_by(site, elev, per, gdd.bin) %>% summarise(DI=mean(DI), cdd_sum=mean(cdd_sum) )
-#order by period
-dat.bper$per= factor(dat.bper$per,levels=c("initial","cold","med","warm"), ordered=TRUE)
-
-#Plot DI by GDD
-dat.bper$cdd= dat.bper$cdd_sum
-di.plot.gdd= ggplot(data=dat.bper, aes(x=cdd, y = DI, color=per))+facet_grid(site~.)+theme_bw()+geom_line(size=2)+xlim(0,250)
-
-#------------------
-#PLOT
-setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\DevelopInd\\")
-file<-paste("DevelopmentalIndex_boulderensis.pdf" ,sep="", collapse=NULL)
-pdf(file,height = 10, width = 10)
-grid.arrange(di.plot.date,di.plot.gdd,ncol=2 )
-dev.off() 

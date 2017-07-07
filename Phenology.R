@@ -39,10 +39,10 @@ hop= read.csv("HopperData.csv")
 #subset years to survey
 clim1= clim[which(clim$Year %in% c(1958, 1959, 1960, 2006:2015))  ,]
 
-#Change years for plotting ### FIX
-clim1[which(clim1$Year==1958),"Year"]= 1958+40
-clim1[which(clim1$Year==1959),"Year"]= 1959+40
-clim1[which(clim1$Year==1960),"Year"]= 1960+40
+##Change years for plotting ### FIX
+#clim1[which(clim1$Year==1958),"Year"]= 1958+40
+#clim1[which(clim1$Year==1959),"Year"]= 1959+40
+#clim1[which(clim1$Year==1960),"Year"]= 1960+40
 
 #set temp outside summer to NA
 clim1$Mean= (clim1$Min + clim1$Max)/2
@@ -84,10 +84,10 @@ hop1= hop1[which(hop1$species %in% specs ),]
 hop2= ddply(hop1, c("site", "year","species","period"), summarise,
              min = min(ordinal, na.rm=TRUE), mean = mean(ordinal, na.rm=TRUE) )
 
-#Change years for plotting ### FIX
-hop2[which(hop2$year==1958),"year"]= 1958+40
-hop2[which(hop2$year==1959),"year"]= 1959+40
-hop2[which(hop2$year==1960),"year"]= 1960+40
+##Change years for plotting ### FIX
+#hop2[which(hop2$year==1958),"year"]= 1958+40
+#hop2[which(hop2$year==1959),"year"]= 1959+40
+#hop2[which(hop2$year==1960),"year"]= 1960+40
 
 #order species by seasonal timing
 #ave phen
@@ -112,15 +112,28 @@ hop1= hop1[order(hop1$ordinal),]
 #cumulative sum of individuals within groups
 hop1 = hop1 %>% group_by(species,site,year) %>% arrange(species,site,year,ordinal) %>% mutate(csind = cumsum(in6))
 #number of median individual
-hop3 = hop1 %>% group_by(species,site,year) %>% arrange(species,site,year,ordinal) %>% mutate(medind = max(csind)/2)
+hop3 = hop1 %>% group_by(species,site,year) %>% arrange(species,site,year,ordinal) %>% mutate(medind = max(csind)/2, qlowind=max(csind)*0.15, qupind=max(csind)*0.85)
 
 #date of median individual
 hop3$inddif= abs(hop3$medind-hop3$csind) #difference from median individual
+hop3$inddif.qlow= abs(hop3$qlowind-hop3$csind) #difference from q20 individual
+hop3$inddif.qup= abs(hop3$qupind-hop3$csind) #difference from q80 individual
 
 hop4= do.call(rbind,lapply(split(hop3,list(hop3$species, hop3$site, hop3$year)),function(chunk) chunk[which.min(chunk$inddif),]))
+hop4.qlow= do.call(rbind,lapply(split(hop3,list(hop3$species, hop3$site, hop3$year)),function(chunk) chunk[which.min(chunk$inddif.qlow),]))
+hop4.qup= do.call(rbind,lapply(split(hop3,list(hop3$species, hop3$site, hop3$year)),function(chunk) chunk[which.min(chunk$inddif.qup),]))
 
-#plot
-ggplot(data=hop4, aes(x=year, y = ordinal, color=site ))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
+#plot low and high percentiles
+#combine
+hop4$quantile=50
+hop4.qup$quantile=85
+hop4.qlow$quantile=15
+hop5= rbind(hop4,hop4.qup, hop4.qlow)
+hop5$quantile= as.factor(hop5$quantile)
+hop5$yr_q= paste(hop5$year, hop5$quantile, sep="_")
+hop5$year= as.factor(hop5$year)
+
+hop4=hop5 #add quantiles 
 
 #-----------------
 # match phenology to temp and dd
@@ -226,6 +239,8 @@ ggplot(data=hop2, aes(x=cdd, y = mean, color=site, shape=period))+geom_point()+g
 #median individual ordinal by dd
 ggplot(data=hop4, aes(x=cdd, y = ordinal, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
 
+plot.qs=ggplot(data=hop4, aes(x=cdd, y = ordinal, color=site, linetype=quantile))+geom_point(aes(shape=period), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()
+
 #drop sites with missing gdd data
 hop2= hop2[which(hop2$cdd_sum>0),]
 
@@ -236,7 +251,12 @@ hop3= hop2[which(hop2$site %in% c("A1","B1", "C1", "CHA")) ,]
 hop3$elevation= as.factor(elevs[match(hop3$site, sites)])
 
 #plot
-setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenSynch\\figures\\")
+setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\figures\\")
+
+#quantiles
+pdf("PhenQuantiles_byGDD.pdf", height = 12, width = 12)
+plot.qs
+dev.off()
 
 #min ordinal date by dd, #plot regression
 pdf("Phen_byGDD.pdf", height = 7, width = 10)
