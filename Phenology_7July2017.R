@@ -27,7 +27,6 @@ clim= read.csv("AlexanderClimateAll_filled.csv")
 #cumsum within groups
 clim = clim %>% group_by(Year,Site) %>% arrange(Julian) %>% mutate(cdd_sum = cumsum(dd_sum),cdd_june = cumsum(dd_june),cdd_july = cumsum(dd_july),cdd_aug = cumsum(dd_aug),cdd_early = cumsum(dd_early),cdd_mid = cumsum(dd_mid),cdd_ac = cumsum(dd_ac),cdd_mb = cumsum(dd_mb),cdd_ms = cumsum(dd_ms) ) 
 
-
 #load hopper data
 setwd( paste(fdir, "grasshoppers\\SexCombined\\", sep="") )
 hop= read.csv("HopperData.csv")
@@ -82,7 +81,7 @@ hop2$species= factor(hop2$species, levels=c("Aeropedellus clavatus","Melanoplus 
 ggplot(data=hop2, aes(x=year, y = min, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
 #mean ordinal date
 ggplot(data=hop2, aes(x=year, y = mean, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
-
+ 
 #-------------
 ## calculate median across individuals
 hop1= hop1[order(hop1$ordinal),]
@@ -189,11 +188,26 @@ pdf("GDDQuantiles_byGDD.pdf", height = 12, width = 12)
 plot.cddqs
 dev.off()
 
-#-------
-#min ordinal date by dd, #plot regression
-pdf("Phen_byGDD.pdf", height = 7, width = 10)
-ggplot(data=hop3, aes(x=cdd, y = min, color=elevation))+geom_point(aes(shape=period, fill=period), size=3)+facet_wrap(~species, ncol=3) +theme_bw()+geom_smooth(method="lm")+ylim(125,250)+ylab("First appearance date")+xlab("Growing degree days")+ scale_color_manual(values=c("darkgreen","darkorange", "blue","purple"))
-dev.off()
+#--------------
+#STATS
+
+##ordinal date
+mod1= lm(ordinal~cdd_yr*species+elevation+period, data=hop4)
+
+#by species
+i=1
+hop.sp= subset(hop4, hop4$species=specs[i])
+mod1= lm(ordinal~cdd_yr*elevation+period, data=hop.sp)
+summary(mod1)
+
+##GDD
+mod1= lm(cdd_sum~cdd_yr*species+elevation+period, data=hop4)
+
+#by species
+i=1
+hop.sp= subset(hop4, hop4$species=specs[i])
+mod1= lm(cdd_sum~cdd_yr*elevation+period, data=hop.sp)
+summary(mod1)
 
 #-------------
 #STATS
@@ -239,7 +253,7 @@ pdf("GDD_plot.pdf", height = 7, width = 10)
 gdd.plot
 dev.off()
 
-#------------------------------
+#------------------------------ 
 #plot initial, recent GDDs
 
 hop2$min.cdd=NA

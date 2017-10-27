@@ -77,22 +77,6 @@ dat$early_late[dat$species %in% specs[c(2,4)]]=1
 #add elevation
 dat$elev= as.factor(elevs[match(dat$site, sites)])
 
-#In relation to OD
-mod1= lme(DI ~ poly(ordinal,3)+elev*per* species, random=~1|year, data=dat)
-anova(mod1)
-
-#GDD TEXT MODEL
-dat1=na.omit(dat)
-#nlme model
-mod1= lme(DI ~ poly(GDDs,3)+elev*per+species, random=~1|year, data=dat1)
-mod1= lme(DI ~ poly(GDDs,3)+elev*per*species, random=~1|year, data=dat1)
-anova(mod1)
-
-dat1= subset(dat1, dat1$species==specs[[2]])
-mod1= lme(DI ~ poly(GDDs,3)+elev*per, random=~1|year, data=dat1)
-
-anova(mod1,type="marginal")
-
 #------------------------------------------------------------
 #PLOTS
 
@@ -357,7 +341,28 @@ pdf("DIplot.pdf",height = 12, width = 12)
 plot(di.plot)
 dev.off()
 
-#STAT
+#-------------------
+#STATS
+
+#In relation to OD
+mod1= lme(DI ~ poly(ordinal,3)+elev+species, random=~1|year, data=dat)
+mod1= lm(DI ~ poly(ordinal,3)+elev+species+dd.seas, data=dat)
+summary(mod1)
+anova(mod1)
+
+#GDD TEXT MODEL
+dat1=na.omit(dat)
+#nlme model
+mod1= lme(DI ~ poly(cdd_sum,3)+elev*per+species, random=~1|year, data=dat1)
+mod1= lm(DI ~ poly(cdd_sum,3)*dd.seas+elev+species, data=dat1)
+summary(mod1)
+anova(mod1)
+
+#subset by species
+dat2= subset(dat1, dat1$species==specs[[2]])
+mod1= lm(DI ~ cdd_sum*dd.seas*elev, data=dat2)
+summary(mod1)
+anova(mod1)
 
 #==========================================================================
 #Composition plot
@@ -416,3 +421,13 @@ setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\fi
 pdf("CompositionPlot.pdf",height = 12, width = 12)
 plot(g1)
 dev.off()
+
+#----------------------
+#STATS
+
+mod1= lm(in5.cper~ GDDs_binned*species*per, data=dat.t3)
+mod1= lm(in4.cper~ GDDs_binned*species*per, data=dat.t3)
+mod1= lm(in3.cper~ GDDs_binned*species*per, data=dat.t3)
+anova(mod1)
+
+
