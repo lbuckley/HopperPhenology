@@ -124,8 +124,8 @@ match1= match(hop2$siteyear, clim1$siteyear)
 matched= which(!is.na(match1))
 hop2$Tmean[matched]<- clim1$Mean[match1[matched]]  
 
-hop2$cdd_sum=NA
-hop2$cdd_sum[matched]<- clim1$Cdd_sum[match1[matched]]  
+hop2$cdd_yr=NA
+hop2$cdd_yr[matched]<- clim1$Cdd_sum[match1[matched]]  
 
 #----------------------------------------------
 hop4$Tmean=NA
@@ -133,8 +133,8 @@ match1= match(hop4$siteyear, clim1$siteyear)
 matched= which(!is.na(match1))
 hop4$Tmean[matched]<- clim1$Mean[match1[matched]]  
 
-hop4$cdd_sum=NA
-hop4$cdd_sum[matched]<- clim1$Cdd_sum[match1[matched]]  
+hop4$cdd_yr=NA
+hop4$cdd_yr[matched]<- clim1$Cdd_sum[match1[matched]]  
 
 #----------------------------------------------
 
@@ -176,14 +176,14 @@ setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\fi
 ## FIGURE 2.
 #quantiles
 #By ordinal date
-plot.qs=ggplot(data=hop4, aes(x=cdd, y = ordinal, color=elevation, linetype=quantile))+geom_point(aes(shape=period), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()+ylab("Day of year")+xlab("Season growing degree days (C)")
+plot.qs=ggplot(data=hop4, aes(x=cdd_yr, y = ordinal, color=elevation, linetype=quantile))+geom_point(aes(shape=period), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()+ylab("Day of year")+xlab("Season growing degree days (C)")
 
 pdf("PhenQuantiles_byGDD.pdf", height = 12, width = 12)
 plot.qs
 dev.off()
 
 #By GDD 
-plot.cddqs=ggplot(data=hop4, aes(x=cdd, y = GDDs, color=site, linetype=quantile))+geom_point(aes(shape=period), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()+ylab("growing degree days (C)")+xlab("Season growing degree days (C)")
+plot.cddqs=ggplot(data=hop4, aes(x=cdd_yr, y = cdd_sum, color=elevation, linetype=quantile))+geom_point(aes(shape=period), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()+ylab("growing degree days (C)")+xlab("Season growing degree days (C)")
 
 pdf("GDDQuantiles_byGDD.pdf", height = 12, width = 12)
 plot.cddqs
@@ -194,6 +194,18 @@ dev.off()
 pdf("Phen_byGDD.pdf", height = 7, width = 10)
 ggplot(data=hop3, aes(x=cdd, y = min, color=elevation))+geom_point(aes(shape=period, fill=period), size=3)+facet_wrap(~species, ncol=3) +theme_bw()+geom_smooth(method="lm")+ylim(125,250)+ylab("First appearance date")+xlab("Growing degree days")+ scale_color_manual(values=c("darkgreen","darkorange", "blue","purple"))
 dev.off()
+
+#-------------
+#STATS
+hopq= subset(hop4, hop4$quantile==50)
+mod1= lm(ordinal~cdd_yr*elevation+species+period,  data=hopq)
+
+#split by species
+i=1
+hopq.sp= subset(hopq, hopq$species== specs[i])
+mod1= lm(ordinal~cdd_yr*elevation+period,  data=hopq.sp)
+mod1= lm(cdd_sum~cdd_yr*elevation+period,  data=hopq.sp)
+summary(mod1)
 
 #====================================
 #ADDITIONAL GDD PLOTS
