@@ -105,7 +105,7 @@ di.plot= ggplot(data=dat, aes(x=cdd, y = DI, color=year))+facet_grid(species~ele
 
 #==============================================================================
 ##Bin by GDD
-gdds= seq( min(dat$GDDs, na.rm=TRUE), max(dat$GDDs, na.rm=TRUE), length.out=30)
+gdds= seq( min(dat$GDDs, na.rm=TRUE), max(dat$GDDs, na.rm=TRUE), length.out=20) #CHANGE NUMBER GDD BINS
 dat$gdd.bin= cut(dat$GDD, breaks = gdds, labels=FALSE)
 
 dat.gddbin = dat %>% group_by(species,site,year,gdd.bin) %>% summarise_each(funs(mean))
@@ -326,13 +326,27 @@ plot.di.md.2591= ggplot(gdat.md.2591) +
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "md 2591m", size=5)
+  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+annotate("text", x=200,y=500, label= "md 2591m", size=5)
+
+#extract legend
+library(cowplot)
+
+# now extract the legend
+legend <- get_legend(plot.di.md.2591)
+
+# and replot suppressing the legend
+plot.di.md.2591 <- plot.di.md.2591 + theme(legend.position='none')
+
+# Now plots are aligned vertically with the legend to the right
+#ggdraw(plot_grid(plot_grid(p1, plot.mpg, ncol=1, align='v'),
+#                 plot_grid(NULL, legend, ncol=1),
+#                 rel_widths=c(1, 0.2)))
 
 #-------------------
 #PLOT
 blank <- grid.rect(gp=gpar(col="white"))
 
-di.plot <- grid.arrange(blank, plot.di.mb.2195, plot.di.mb.2591, plot.di.mb.3048, blank,plot.di.cp.2195, plot.di.cp.2591, plot.di.cp.3048,plot.di.ms.1752,plot.di.ms.2195, plot.di.ms.2591, plot.di.ms.3048,plot.di.md.1752,plot.di.md.2195, plot.di.md.2591, nrow=4)
+di.plot <- grid.arrange(blank, plot.di.mb.2195, plot.di.mb.2591, plot.di.mb.3048, blank,plot.di.cp.2195, plot.di.cp.2591, plot.di.cp.3048,plot.di.ms.1752,plot.di.ms.2195, plot.di.ms.2591, plot.di.ms.3048,plot.di.md.1752,plot.di.md.2195, plot.di.md.2591,legend, nrow=4)
 
 ## FIGURE 3
 #PLOT
@@ -378,7 +392,7 @@ dat.t= dat.t %>% mutate(in6.cper= in6.per+in5.per+in4.per+in3.per+in2.per+in1.pe
                         in2.cper= in2.per+in1.per,
                         in1.cper= in1.per)
 
-dat.t1= dat.t[,c(1:4,41:46) ] 
+dat.t1= dat.t[,c(1:4,39:ncol(dat.t)) ] 
 #To long format, needed?
 dat.t2 <- gather(dat.t1, stage, cper, in6.cper:in1.cper, factor_key=TRUE)
 
@@ -414,6 +428,13 @@ dat.t3$per= factor(dat.t3$per, levels=c("initial","cold","med","warm") )
 dat.t3$species= factor(dat.t3$species, levels=c("Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes","Melanoplus dawsoni") )
 
 g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(species~per)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)
+
+#Smoothed version
+g1= ggplot(data=dat.t3) + geom_smooth(aes(x=GDDs_binned, y = in5.cper, color="in5"),span=0.3,se=FALSE) + geom_smooth(aes(x=GDDs_binned, y = in3.cper, color="in3"),span=0.3,se=FALSE) +geom_smooth(aes(x=GDDs_binned, y = in2.cper, color="in2"),span=0.3,se=FALSE)+facet_grid(species~per)+ylim(0,1)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)
+
+#No lines
+g1= ggplot(data=dat.t3) +facet_grid(species~per)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)
+
 
 ## FIGURE SX. Composition
 #PLOT
