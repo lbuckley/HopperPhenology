@@ -4,6 +4,11 @@ library(plyr)
 library(dplyr)
 library(zoo)
 
+#SUMMARY OF DATA PROCESSING
+#1.	Fixed reconstruction of B1 2009 data, previously had issue with column selection
+#2.	Coarsely reconstructed A1 data for 2009 and 2010 using data from A1, C1, NOAA, and Gross Reservoir
+#3. Linearly interpolated data with a maximum gap of 6: B1 2012, C1 2013, C1 2015, A1 2010 
+
 #source degree days function
 setwd("C:\\Users\\Buckley\\Documents\\HopperPhenology\\")
 source("degreedays.R")
