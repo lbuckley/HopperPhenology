@@ -255,3 +255,19 @@ grid.arrange(size.plot, ctmax.plot, ctmin.plot+ theme(legend.position = 'none'),
              heights=c(0.4,0.4,0.5,0.1,1))
 
 dev.off()
+
+#------------------------
+
+phen= pbt %>% group_by(Site,Spec) %>% summarise(PBT.m=mean(PBT, na.rm=TRUE), Ctmin.m=mean(Ctmin, na.rm=TRUE),Ctmax.m=mean(Ctmax, na.rm=TRUE),mass.m=mean(mass_g, na.rm=TRUE)  )
+
+#size
+phen= size %>% group_by(Site,Species) %>% summarise(size=mean(Mean.Femur.Length, na.rm=TRUE)  )
+phen=phen[order(phen$Species),]
+
+#repro
+phen= repro %>% group_by(Site,Species) %>% summarise(Mean.Femur.Length=mean(Mean.Femur.Length, na.rm=TRUE), Clutch.Size=mean(Clutch.Size, na.rm=TRUE),Mean.Egg.Mass=mean(Mean.Egg.Mass, na.rm=TRUE),Number.Ovarioles=mean(Number.Ovarioles, na.rm=TRUE),Number.Functioing.Ovarioles=mean(Number.Functioing.Ovarioles, na.rm=TRUE),Proportion.Functioning.Ovarioles=mean(Proportion.Functioning.Ovarioles, na.rm=TRUE),clutch.weight.g=mean(clutch.weight.g, na.rm=TRUE)  )
+phen=phen[order(phen$Species, phen$Site),]
+
+write.csv(phen, "PhenDat.csv" )
+
+

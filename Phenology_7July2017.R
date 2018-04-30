@@ -175,14 +175,18 @@ setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\fi
 ## FIGURE 2.
 #quantiles
 #By ordinal date
-plot.qs=ggplot(data=hop4, aes(x=cdd_yr, y = ordinal, color=elevation, linetype=quantile))+geom_point(aes(shape=period), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()+ylab("Day of year")+xlab("Season growing degree days (C)")
+plot.qs=ggplot(data=hop4, aes(x=cdd_yr, y = ordinal, color=elevation, linetype=quantile))+geom_point(aes(shape=quantile,fill=elevation, alpha=period, stroke=1), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()+ylab("Day of year")+xlab("Season growing degree days (C)")+
+  scale_shape_manual(values = c(21, 22, 23))+
+  scale_alpha_manual(values = c(0.5,0.9))
 
 pdf("PhenQuantiles_byGDD.pdf", height = 12, width = 12)
 plot.qs
 dev.off()
 
 #By GDD 
-plot.cddqs=ggplot(data=hop4, aes(x=cdd_yr, y = cdd_sum, color=elevation, linetype=quantile))+geom_point(aes(shape=period), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()+ylab("growing degree days (C)")+xlab("Season growing degree days (C)")
+plot.cddqs=ggplot(data=hop4, aes(x=cdd_yr, y = cdd_sum, color=elevation, linetype=quantile))+geom_point(aes(shape=quantile,fill=elevation, alpha=period, stroke=1), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()+ylab("growing degree days (C)")+xlab("Season growing degree days (C)")+
+  scale_shape_manual(values = c(21, 22, 23))+
+  scale_alpha_manual(values = c(0.5,0.9))
 
 pdf("GDDQuantiles_byGDD.pdf", height = 12, width = 12)
 plot.cddqs

@@ -241,26 +241,27 @@ dat.e=  dat.md[which(dat.md$elev==2591),]
 s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.md.2591 <- interp2xyz(s, data.frame=TRUE)
 
-#--------------------------
+#------------------------
+
 #plot
 #mb
 plot.di.mb.2195= ggplot(gdat.mb.2195) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "mb 2195m", size=5)
+  theme_bw(base_size=16)+xlab("")+ylab("Melanoplus boulderensis")+theme(legend.position="none")+labs(title= "2195m") #+annotate("text", x=200,y=500, label= "mb 2195m", size=5)
 
 plot.di.mb.2591= ggplot(gdat.mb.2591) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "mb 2591", size=5)
+  theme_bw(base_size=16)+xlab("")+ylab("")+theme(legend.position="none")+labs(title= "2591m") #+annotate("text", x=200,y=500, label= "mb 2591", size=5)
 
 plot.di.mb.3048= ggplot(gdat.mb.3048) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=200, label= "mb 3048", size=5)
+  theme_bw(base_size=16)+xlab("")+ylab("")+theme(legend.position="none")+labs(title= "3048m") #+annotate("text", x=200,y=200, label= "mb 3048", size=5)
 
 #------------
 #cp
@@ -268,19 +269,19 @@ plot.di.cp.2195= ggplot(gdat.cp.2195) +
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "cp 2195m", size=5)
+  theme_bw(base_size=16)+xlab("")+ylab("Camnula pellucida")+theme(legend.position="none")+labs(title= "2195m") #+annotate("text", x=200,y=500, label= "cp 2195m", size=5)
 
 plot.di.cp.2591= ggplot(gdat.cp.2591) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "cp 2591m", size=5)
+  theme_bw(base_size=16)+xlab("")+ylab("")+theme(legend.position="none")+labs(title= "2591m") #+annotate("text", x=200,y=500, label= "cp 2591m", size=5)
 
 plot.di.cp.3048= ggplot(gdat.cp.3048) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=200, label= "cp 3048m", size=5)
+  theme_bw(base_size=16)+xlab("")+ylab("")+theme(legend.position="none")+labs(title= "3048m") #+annotate("text", x=200,y=200, label= "cp 3048m", size=5)
 
 #------------
 #ms
@@ -288,25 +289,25 @@ plot.di.ms.1752= ggplot(gdat.ms.1752) +
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=1000, label= "ms 1752m", size=5)
+  theme_bw(base_size=16)+xlab("")+ylab("Melanoplus sanguinipes")+theme(legend.position="none")+labs(title= "1752m") #+annotate("text", x=200,y=1000, label= "ms 1752m", size=5)
 
 plot.di.ms.2195= ggplot(gdat.ms.2195) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "ms 2195m", size=5)
+  theme_bw(base_size=16)+xlab("")+ylab("")+theme(legend.position="none")+labs(title= "2195m") #+annotate("text", x=200,y=500, label= "ms 2195m", size=5)
 
 plot.di.ms.2591= ggplot(gdat.ms.2591) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "ms 2591m", size=5)
+  theme_bw(base_size=16)+xlab("")+ylab("")+theme(legend.position="none")+labs(title= "2591m") #+annotate("text", x=200,y=500, label= "ms 2591m", size=5)
 
 plot.di.ms.3048= ggplot(gdat.ms.3048) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=200, label= "ms 3048m", size=5)
+  theme_bw(base_size=16)+xlab("")+ylab("")+theme(legend.position="none")+labs(title= "3048m") #+annotate("text", x=200,y=200, label= "ms 3048m", size=5)
 
 #------------
 #md
@@ -314,19 +315,19 @@ plot.di.md.1752= ggplot(gdat.md.1752) +
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=1000, label= "md 1752m", size=5)
+  theme_bw(base_size=16)+xlab("")+ylab("Melanoplus dawsoni")+theme(legend.position="none")+labs(title= "1752m") #+annotate("text", x=200,y=1000, label= "md 1752m", size=5)
 
 plot.di.md.2195= ggplot(gdat.md.2195) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+theme(legend.position="none")+annotate("text", x=200,y=500, label= "md 2195m", size=5)
+  theme_bw(base_size=16)+xlab("")+ylab("")+theme(legend.position="none")+labs(title= "2195m") #+annotate("text", x=200,y=500, label= "md 2195m", size=5)
 
 plot.di.md.2591= ggplot(gdat.md.2591) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
   scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
-  theme_bw(base_size=16)+xlab("gdd")+ylab("seasonal gdd")+annotate("text", x=200,y=500, label= "md 2591m", size=5)
+  theme_bw(base_size=16)+xlab("")+ylab("")+labs(title= "2591m") #+annotate("text", x=200,y=500, label= "md 2591m", size=5)
 
 #extract legend
 library(cowplot)
@@ -346,13 +347,21 @@ plot.di.md.2591 <- plot.di.md.2591 + theme(legend.position='none')
 #PLOT
 blank <- grid.rect(gp=gpar(col="white"))
 
-di.plot <- grid.arrange(blank, plot.di.mb.2195, plot.di.mb.2591, plot.di.mb.3048, blank,plot.di.cp.2195, plot.di.cp.2591, plot.di.cp.3048,plot.di.ms.1752,plot.di.ms.2195, plot.di.ms.2591, plot.di.ms.3048,plot.di.md.1752,plot.di.md.2195, plot.di.md.2591,legend, nrow=4)
+di.plot <- grid.arrange(blank, plot.di.mb.2195, plot.di.mb.2591, plot.di.mb.3048, blank,plot.di.cp.2195, plot.di.cp.2591, plot.di.cp.3048,plot.di.ms.1752,plot.di.ms.2195, plot.di.ms.2591, plot.di.ms.3048,plot.di.md.1752,plot.di.md.2195, plot.di.md.2591,blank, nrow=4)
 
 ## FIGURE 3
 #PLOT
 setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\figures\\")
 pdf("DIplot.pdf",height = 12, width = 12)
-plot(di.plot)
+
+grid.draw(grobTree(rectGrob(gp=gpar(fill="white", lwd=0)), 
+                   grid.arrange(
+                     arrangeGrob(di.plot,  
+                                 bottom=grid::textGrob(label= "gdd", gp= gpar(fontsize=24, col="black")),
+                                 left=grid::textGrob(label= "seasonal gdd", rot=90, gp= gpar(fontsize=24, col="black"))),
+                     legend, 
+                     widths=c(9,1))
+))
 dev.off()
 
 #-------------------
