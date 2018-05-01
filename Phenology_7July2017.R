@@ -175,16 +175,16 @@ setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\fi
 ## FIGURE 2.
 #quantiles
 #By ordinal date
-plot.qs=ggplot(data=hop4, aes(x=cdd_yr, y = ordinal, color=elevation, linetype=quantile))+geom_point(aes(shape=quantile,fill=elevation, alpha=period, stroke=1), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()+ylab("Day of year")+xlab("Season growing degree days (C)")+
+plot.qs=ggplot(data=hop4, aes(x=cdd_yr, y = ordinal, color=elevation, linetype=quantile))+geom_point(aes(shape=quantile,fill=elevation, alpha=period, stroke=1), size=3)+geom_point(aes(shape=quantile,fill=NULL, stroke=1), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()+ylab("Day of year")+xlab("Season growing degree days (C)")+
   scale_shape_manual(values = c(21, 22, 23))+
-  scale_alpha_manual(values = c(0.5,0.9))
+  scale_alpha_manual(values = c(0.2,0.9))
 
 pdf("PhenQuantiles_byGDD.pdf", height = 12, width = 12)
 plot.qs
 dev.off()
 
 #By GDD 
-plot.cddqs=ggplot(data=hop4, aes(x=cdd_yr, y = cdd_sum, color=elevation, linetype=quantile))+geom_point(aes(shape=quantile,fill=elevation, alpha=period, stroke=1), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()+ylab("growing degree days (C)")+xlab("Season growing degree days (C)")+
+plot.cddqs=ggplot(data=hop4, aes(x=cdd_yr, y = cdd_sum, color=elevation, linetype=quantile))+geom_point(aes(shape=quantile,fill=elevation, alpha=period, stroke=1), size=3)+geom_point(aes(shape=quantile,fill=NULL, stroke=1), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()+ylab("growing degree days (C)")+xlab("Season growing degree days (C)")+
   scale_shape_manual(values = c(21, 22, 23))+
   scale_alpha_manual(values = c(0.5,0.9))
 
@@ -244,10 +244,14 @@ clim2$period[which(clim2$Year<1961)]="initial"
 
 clim2$sj= paste(clim2$elevation, clim2$Year, sep="_")
 
+#change elevation labels
+clim2$SiteElev= clim2$elevation
+levels(clim2$SiteElev)<- c("1752m", "2195m", "2591m", "3048m")
+
 #plot GDD accumulation over time
 #gdd.plot= ggplot(data=clim2, aes(x=Julian, y = cdd, color=as.factor(Year) ) )+geom_line(aes(linetype=period), size=1)+facet_grid(.~elevation, scales="free_y") +theme_bw()+ scale_linetype_manual(breaks=c("initial","resurvey"), values=c("dashed","solid"))
 
-gdd.plot= ggplot(data=clim2, aes(x=Julian, y = cdd, color=rev(period), group=sj) )+geom_line(size=1)+facet_grid(.~elevation, scales="free_y") +theme_bw()
+gdd.plot= ggplot(data=clim2, aes(x=Julian, y = cdd, color=rev(period), group=sj) )+geom_line(size=1)+facet_grid(.~SiteElev, scales="free_y") +theme_bw()+xlab("Day of year")+ylab("Cummulative growing degree days")+labs(color="Survey period" )+theme(legend.position="bottom")+scale_color_manual(values=c("black","gray"),labels=c("initial","resurvey") )
 
 ##FIGURE 1
 setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\figures\\")

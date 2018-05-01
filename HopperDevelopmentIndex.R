@@ -326,7 +326,7 @@ plot.di.md.2195= ggplot(gdat.md.2195) +
 plot.di.md.2591= ggplot(gdat.md.2591) + 
   aes(x = x, y = y, z = z, fill = z) + 
   geom_tile() + 
-  scale_fill_distiller(palette="Spectral", na.value="white", name="DI") +
+  scale_fill_distiller(palette="Spectral", na.value="white", name="Development Index") +
   theme_bw(base_size=16)+xlab("")+ylab("")+labs(title= "2591m") #+annotate("text", x=200,y=500, label= "md 2591m", size=5)
 
 #extract legend
@@ -347,7 +347,7 @@ plot.di.md.2591 <- plot.di.md.2591 + theme(legend.position='none')
 #PLOT
 blank <- grid.rect(gp=gpar(col="white"))
 
-di.plot <- grid.arrange(blank, plot.di.mb.2195, plot.di.mb.2591, plot.di.mb.3048, blank,plot.di.cp.2195, plot.di.cp.2591, plot.di.cp.3048,plot.di.ms.1752,plot.di.ms.2195, plot.di.ms.2591, plot.di.ms.3048,plot.di.md.1752,plot.di.md.2195, plot.di.md.2591,blank, nrow=4)
+di.plot <- grid.arrange(blank, plot.di.mb.2195, plot.di.mb.2591, plot.di.mb.3048, blank,plot.di.cp.2195, plot.di.cp.2591, plot.di.cp.3048,plot.di.ms.1752,plot.di.ms.2195, plot.di.ms.2591, plot.di.ms.3048,plot.di.md.1752,plot.di.md.2195, plot.di.md.2591,legend, nrow=4)
 
 ## FIGURE 3
 #PLOT
@@ -357,11 +357,10 @@ pdf("DIplot.pdf",height = 12, width = 12)
 grid.draw(grobTree(rectGrob(gp=gpar(fill="white", lwd=0)), 
                    grid.arrange(
                      arrangeGrob(di.plot,  
-                                 bottom=grid::textGrob(label= "gdd", gp= gpar(fontsize=24, col="black")),
-                                 left=grid::textGrob(label= "seasonal gdd", rot=90, gp= gpar(fontsize=24, col="black"))),
-                     legend, 
-                     widths=c(9,1))
-))
+                                 bottom=grid::textGrob(label= "growing degree days", gp= gpar(fontsize=24, col="black")),
+                                 left=grid::textGrob(label= "seasonal growing degree days", rot=90, gp= gpar(fontsize=24, col="black")))
+                    # , legend, widths=c(9,1))
+)))
 dev.off()
 
 #-------------------
@@ -436,23 +435,24 @@ dat.t3$GDDs_binned= gdds[dat.t3$gdd.bin]
 dat.t3$per= factor(dat.t3$per, levels=c("initial","cold","med","warm") )
 dat.t3$species= factor(dat.t3$species, levels=c("Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes","Melanoplus dawsoni") )
 
-g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="in5")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="in3")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="in2"))+facet_grid(species~per)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)
-
-#Smoothed version
-g1= ggplot(data=dat.t3) + geom_smooth(aes(x=GDDs_binned, y = in5.cper, color="in5"),span=0.3,se=FALSE) + geom_smooth(aes(x=GDDs_binned, y = in3.cper, color="in3"),span=0.3,se=FALSE) +geom_smooth(aes(x=GDDs_binned, y = in2.cper, color="in2"),span=0.3,se=FALSE)+facet_grid(species~per)+ylim(0,1)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)
-
-#No lines
-g1= ggplot(data=dat.t3) +facet_grid(species~per)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)
-
+g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="4th and 5th")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="3rd")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="1st and 2nd"))+facet_grid(species~per)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+theme_classic()+ylab("Development Index")+xlab("Cummulative Growing Degree Days")+theme(legend.position="bottom", text = element_text(size=14))+labs(color="Instar" )+  guides(colour = guide_legend(override.aes = list(size=3)))
+#+scale_color_manual(values=c("red","green","purple"),labels=c("1st and 2nd","3rd","4th and 5th") )
 
 ## FIGURE SX. Composition
 #PLOT
 setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\figures\\")
-pdf("CompositionPlot.pdf",height = 12, width = 12)
+pdf("CompositionPlot_B1.pdf",height = 12, width = 12)
 plot(g1)
 dev.off()
 
-#----------------------
+#-------------------------
+#Smoothed version
+g1= ggplot(data=dat.t3) + geom_smooth(aes(x=GDDs_binned, y = in5.cper, color="in5"),span=0.3,se=FALSE) + geom_smooth(aes(x=GDDs_binned, y = in3.cper, color="in3"),span=0.3,se=FALSE) +geom_smooth(aes(x=GDDs_binned, y = in2.cper, color="in2"),span=0.3,se=FALSE)+facet_grid(species~per)+ylim(0,1)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+theme_classic()+ylab("Development Index")+xlab("Cummulative Growing Degree Days")
+
+#No lines
+g1= ggplot(data=dat.t3) +facet_grid(species~per)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+theme_classic()+ylab("Development Index")+xlab("Cummulative Growing Degree Days")
+
+#---------------------- 
 #STATS
 
 mod1= lm(in5.cper~ GDDs_binned*species*per, data=dat.t3)
