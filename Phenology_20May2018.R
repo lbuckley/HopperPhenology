@@ -4,6 +4,8 @@
 library(ggplot2)
 library(plyr) 
 library(dplyr)
+library(colorRamps)
+require(cowplot)
 
 sites= c("CHA", "A1", "B1", "C1", "D1")  #Redfox: 1574
 elevs= c(1752, 2195, 2591, 3048, 3739)
@@ -171,7 +173,7 @@ hop4$elevation= as.factor(elevs[match(hop4$site, sites)])
 
 #------------
 #plot
-setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\figures\\")
+setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenology/figures/")
 
 ## FIGURE 2.
 #quantiles
@@ -191,6 +193,75 @@ plot.cddqs=ggplot(data=hop4, aes(x=cdd_yr, y = cdd_sum, color=elevation, linetyp
 
 pdf("GDDQuantiles_byGDD.pdf", height = 12, width = 12)
 plot.cddqs
+dev.off()
+
+#-------
+#Group by elevation rather than species
+hop4q= subset(hop4, hop4$quantile==50)
+
+#calculate significant regressions
+#apply through combinations of species and elevations
+hop4q$specelev= paste(hop4q$species, hop4q$elevation, sep="")
+
+###hop4.elev= subset(hop4q, hop4q$elevation==elevs[elev.k])
+###lapply(1:6, function(x) lm(hop4.elev$ordinal ~ hop4.elev$) )
+
+
+#DOY
+plot.phen=ggplot(data=hop4q, aes(x=cdd_yr, y = ordinal, color=species))+
+  geom_point(aes(shape=period, fill=species, alpha=period, stroke=1), size=3)+
+  geom_point(aes(shape=period, fill=NULL, stroke=1), size=3)+
+  geom_smooth(method="lm",se=F)+
+  facet_wrap(~elevation, ncol=1, scales="free") +
+  theme_bw()+ylab("day of year")+xlab("season growing degree days (C)")+
+  scale_shape_manual(values = c(21, 22, 23))+
+  scale_alpha_manual(values = c(0.2,0.9))+theme(legend.position="none")
+
+#GDD
+plot.phen.gdd=ggplot(data=hop4q, aes(x=cdd_yr, y = cdd, color=species))+
+  geom_point(aes(shape=period, fill=species, alpha=period, stroke=1), size=3)+
+  geom_point(aes(shape=period, fill=NULL, stroke=1), size=3)+
+  geom_smooth(method="lm",se=F)+
+  facet_wrap(~elevation, ncol=1, scales="free") +
+  theme_bw()+ylab("cummulative growing degree days")+xlab("season growing degree days (C)")+
+  scale_shape_manual(values = c(21, 22, 23))+
+  scale_alpha_manual(values = c(0.2,0.9))
+
+#----
+pdf("plot_phen.pdf", height = 12, width = 10)
+plot_grid(plot.phen, plot.phen.gdd, nrow=1, rel_widths=c(1,1.5) )
+dev.off()
+
+#-----------------
+#ALL QUANTILES
+
+#DOY
+plot.phenq=ggplot(data=hop4, aes(x=cdd_yr, y = ordinal, color=species))+
+  geom_point(aes(fill=species, alpha=period, stroke=1), size=3)+
+  geom_point(aes(fill=NULL, stroke=1), size=3)+
+  geom_smooth(method="lm",se=F)+
+  facet_grid(elevation~quantile, scales="free") +
+  theme_bw()+ylab("day of year")+xlab("season growing degree days (C)")+
+  scale_shape_manual(values = c(21, 22, 23))+
+  scale_alpha_manual(values = c(0.2,0.9))
+
+#GDD
+plot.phenq.gdd=ggplot(data=hop4, aes(x=cdd_yr, y = cdd, color=species))+
+  geom_point(aes(fill=species, alpha=period, stroke=1), size=3)+
+  geom_point(aes(fill=NULL, stroke=1), size=3)+
+  geom_smooth(method="lm",se=F)+
+  facet_grid(elevation~quantile, scales="free") +
+  theme_bw()+ylab("cummulative growing degree days")+xlab("season growing degree days (C)")+
+  scale_shape_manual(values = c(21, 22, 23))+
+  scale_alpha_manual(values = c(0.2,0.9))
+
+#----
+pdf("plot_phenq.pdf", height = 12, width = 10)
+plot.phenq
+dev.off()
+
+pdf("plot_phenq_gdd.pdf", height = 12, width = 10)
+plot.phenq.gdd
 dev.off()
 
 #--------------
@@ -226,6 +297,54 @@ mod1= lm(ordinal~cdd_yr*elevation+period,  data=hopq.sp)
 mod1= lm(cdd_sum~cdd_yr*elevation+period,  data=hopq.sp)
 summary(mod1)
 
+#===============================
+#ELEVATION PLOTS
+
+#GDDS
+#add elevation
+clim1$elevation= elevs[match(clim1$Site, sites)]
+#fix NAs
+clim1$Cdd_sum[which(is.infinite(clim1$Cdd_sum))]<- NA
+#add period
+clim1$period="resurvey"
+clim1$period[which(clim1$Year<2000)]<-"initial"
+
+#Order by average across sites with complete gdd data
+clim.ave= subset(clim1, clim1$Site %in% c("B1","C1"))
+clim.ave= aggregate(clim.ave, list(clim.ave$Year),FUN=mean )
+clim1$Cdd_siteave= clim.ave$Cdd_sum[match(clim1$Year, clim.ave$Year)]
+
+plot_gdd_elev=ggplot(data=clim1, aes(x=elevation, y = Cdd_sum, group=Year, color=Cdd_siteave, linetype=period))+
+  geom_line()+ 
+  scale_colour_gradientn(name="Mean GDD", colours =matlab.like(10))+
+  theme_bw()+ylab("season growing degree days (C)")+xlab("Elevation (m)")
+#-------
+#Plot ave phenology accross years
+
+#ave across years
+hop.ave= hop4[which(hop4$quantile==50),]
+hop.ave$elevation= as.numeric(as.character(hop.ave$elevation))
+hop.ave= as.data.frame( hop.ave[,c("elevation", "cdd_sum","site","year","ordinal","cdd","species")] )
+hop.ave= aggregate(hop.ave, list(hop.ave$elevation, hop.ave$species),FUN=mean )
+hop.ave$species= hop.ave$Group.2
+
+plot_gdds_elev=ggplot(data=hop.ave, aes(x=elevation, y = cdd, group=species, color=species))+
+  geom_line()+ 
+  theme_bw()+ylab("cummulative growing degree days (C)")+xlab("elevation (m)")+theme(legend.position="none")
+
+plot_doy_elev=ggplot(data=hop.ave, aes(x=elevation, y = ordinal, group=species, color=species))+
+  geom_line()+ 
+  theme_bw()+ylab("day of year")+xlab("elevation (m)")
+
+#----------
+
+#plot together
+fig0= plot_grid(plot_gdd_elev, plot_gdds_elev, plot_doy_elev, labels = c('A', 'B','C'), rel_widths=c(1,0.7,1.3), nrow=1)
+
+pdf("GDD_phen_byElev.pdf", height = 5, width = 12)
+fig0
+dev.off()
+
 #====================================
 #ADDITIONAL GDD PLOTS
 
@@ -255,7 +374,6 @@ levels(clim2$SiteElev)<- c("1752m", "2195m", "2591m", "3048m")
 gdd.plot= ggplot(data=clim2, aes(x=Julian, y = cdd, color=rev(period), group=sj) )+geom_line(size=1)+facet_grid(.~SiteElev, scales="free_y") +theme_bw()+xlab("Day of year")+ylab("Cummulative growing degree days")+labs(color="Survey period" )+theme(legend.position="bottom")+scale_color_manual(values=c("black","gray"),labels=c("initial","resurvey") )
 
 ##FIGURE 1
-setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\figures\\")
 
 #min ordinal date by dd, #plot regression
 pdf("GDD_plot.pdf", height = 7, width = 10)
