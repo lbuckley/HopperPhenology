@@ -4,7 +4,6 @@ library(plyr)
 library(dplyr)
 library(reshape2)
 library(tidyr)
-library(gridExtra)
 
 library(lme4)
 library(nlme)
@@ -18,7 +17,7 @@ sites= c("A1", "B1", "C1", "CHA")
 elevs= c(2195, 2591, 3048, 1752)
 
 #source degree days function
-setwd("C:\\Users\\Buckley\\Documents\\HopperPhenology\\")
+setwd("/Users/laurenbuckley/HopperPhenology/")
 source("degreedays.R")
 
 count= function(x){
@@ -26,15 +25,16 @@ count= function(x){
 }
 
 #--------------------------------------
-fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
+#fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
 #fdir= "C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
+fdir= "/Volumes/GoogleDrive/My\ Drive/AlexanderResurvey/DataForAnalysis/"
 
 #load climate data
 setwd( paste(fdir, "climate", sep="") )   
 clim= read.csv("AlexanderClimateAll_filled.csv")
 
 #load hopper data
-setwd( paste(fdir, "grasshoppers\\SexCombined\\", sep="") )
+setwd( paste(fdir, "grasshoppers/SexCombined/", sep="") )
 hop= read.csv("HopperData.csv")
 #fix GDD column
 hop$GDDs= hop$cdd_sum
@@ -154,13 +154,29 @@ dat$per[which(dat$year %in% c(2006,2007,2012) )]="warm"
 dat$gdd.binned= gdds[dat$gdd.bin]
 dat2= dat %>% group_by(species,elev, site, per,gdd.binned) %>%  mutate(DI=mean(DI) )
 
+#order varaibles
+#period
+dat$per= factor(dat$per, levels=c("initial","cold","med","warm") )
+#elevation
+dat$elev= factor(dat$elev, levels=c(3048,2591,2195,1752) )
+#species
+dat$species= factor(dat$species, levels=c("Melanoplus boulderensis", "Camnula pellucida", "Melanoplus sanguinipes", "Melanoplus dawsoni") )
+
 #DEVELOPMENTAL INDEX
 #Plot DI by ordinal date
-di.plot= ggplot(data=dat, aes(x=ordinal, y = DI, color=per))+facet_grid(species~elev) +geom_point(aes(shape=period), size=2)+theme_bw()+geom_line()
+di.plot= ggplot(data=dat, aes(x=ordinal, y = DI, color=per))+facet_grid(elev~species) +
+  theme_bw()+geom_smooth(se=F) +
+  scale_color_manual(values=c("black", "blue", "green","red") ) +
+  theme_bw()+ylab("development index")+xlab("day of year")+labs(color="season")
+  #scale_linetype_manual(values=c("dashed", "solid", "solid","solid") ) +
+#+ geom_point(aes(shape=period), size=2)
+## USE FIG? *************
 
 #Plot DI by GDD
 dat$cdd= dat$cdd_sum
-di.plot= ggplot(data=dat, aes(x=cdd, y = DI, color=per))+facet_grid(species~elev) +geom_point(aes(shape=period), size=2)+theme_bw()+xlim(0,600)+ylim(1,6)+geom_line() #+geom_smooth(method="loess",se=F)
+di.plot= ggplot(data=dat, aes(x=cdd, y = DI, color=per))+facet_grid(species~elev) +
+  theme_bw()+geom_smooth(se=F)+ #+ geom_point(aes(shape=period), size=2)+
+xlim(0,600)+ylim(1,6)
 #note xlim restricted
 
 #-----------------
@@ -173,6 +189,8 @@ dat$dd.seas= NA
 dat$dd.seas= unlist(clim.seas[match1,"dd.seas"])
 
 #--------
+## CHANGE TO ORDINAL DATA
+#Change cdd to ordinal
 
 #Interpolate
 dat1=na.omit(dat)
@@ -181,64 +199,64 @@ dat1=na.omit(dat)
 dat.mb= dat1[which(dat1$species=="Melanoplus boulderensis"),]
 
 dat.e=  dat.mb[which(dat.mb$elev==2195),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
+s=interp(x=dat.e$ordinal,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.mb.2195 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.mb[which(dat.mb$elev==2591),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
+s=interp(x=dat.e$ordinal,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.mb.2591 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.mb[which(dat.mb$elev==3048),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
+s=interp(x=dat.e$ordinal,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.mb.3048 <- interp2xyz(s, data.frame=TRUE)
 
 #--------------------------
 dat.cp= dat1[which(dat1$species=="Camnula pellucida"),]
 
 dat.e=  dat.cp[which(dat.cp$elev==2195),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
+s=interp(x=dat.e$ordinal,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.cp.2195 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.cp[which(dat.cp$elev==2591),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
+s=interp(x=dat.e$ordinal,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.cp.2591 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.cp[which(dat.cp$elev==3048),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
+s=interp(x=dat.e$ordinal,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.cp.3048 <- interp2xyz(s, data.frame=TRUE)
 
 #--------------------------
 dat.ms= dat1[which(dat1$species=="Melanoplus sanguinipes"),]
 
 dat.e=  dat.ms[which(dat.ms$elev==1752),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
+s=interp(x=dat.e$ordinal,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.ms.1752 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.ms[which(dat.ms$elev==2195),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
+s=interp(x=dat.e$ordinal,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.ms.2195 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.ms[which(dat.ms$elev==2591),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
+s=interp(x=dat.e$ordinal,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.ms.2591 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.ms[which(dat.ms$elev==3048),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
+s=interp(x=dat.e$ordinal,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.ms.3048 <- interp2xyz(s, data.frame=TRUE)
 
 #--------------------------
 dat.md= dat1[which(dat1$species=="Melanoplus dawsoni"),]
 
 dat.e=  dat.md[which(dat.md$elev==1752),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
+s=interp(x=dat.e$ordinal,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.md.1752 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.md[which(dat.md$elev==2195),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
+s=interp(x=dat.e$ordinal,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.md.2195 <- interp2xyz(s, data.frame=TRUE)
 
 dat.e=  dat.md[which(dat.md$elev==2591),]
-s=interp(x=dat.e$cdd,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
+s=interp(x=dat.e$ordinal,y=dat.e$dd.seas,z=dat.e$DI, duplicate="mean", yo= seq(min(dat.e$dd.seas), max(dat.e$dd.seas), length.out=15) )
 gdat.md.2591 <- interp2xyz(s, data.frame=TRUE)
 
 #------------------------
@@ -351,8 +369,8 @@ di.plot <- grid.arrange(blank, plot.di.mb.2195, plot.di.mb.2591, plot.di.mb.3048
 
 ## FIGURE 3
 #PLOT
-setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperPhenology\\figures\\")
-pdf("DIplot.pdf",height = 12, width = 12)
+setwd("/Volumes/GoogleDrive/My\ Drive/Buckley/Work/GrasshopperPhenology/figures/")
+pdf("DIplot_doy.pdf",height = 12, width = 12)
 
 grid.draw(grobTree(rectGrob(gp=gpar(fill="white", lwd=0)), 
                    grid.arrange(
@@ -390,7 +408,11 @@ anova(mod1)
 #Composition plot
 
 #Calculate percent composition
-dat.t= dat.gddbin
+
+#Switch to ordinal date
+#dat.t= dat.gddbin
+dat.t= dat.datebin
+
 dat.t= dat.t %>% mutate(in6.per= in6/total,in5.per= in5/total,in4.per= in4/total,in3.per= in3/total,in2.per= in2/total,in1.per= in1/total) 
 #cumulative percentage
 dat.t= dat.t %>% mutate(in6.cper= in6.per+in5.per+in4.per+in3.per+in2.per+in1.per, 
@@ -430,12 +452,26 @@ dat.t1$per[which(dat.t1$year %in% c(2006,2007,2012) )]="warm"
 #-------
 
 #PLOT
-dat.t3= subset(dat.t1, dat.t1$site=="B1")
-dat.t3$GDDs_binned= gdds[dat.t3$gdd.bin]
-dat.t3$per= factor(dat.t3$per, levels=c("initial","cold","med","warm") )
-dat.t3$species= factor(dat.t3$species, levels=c("Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes","Melanoplus dawsoni") )
+dat.t3= subset(dat.t1, dat.t1$site %in% c("A1","C1"))
+dat.t3= subset(dat.t3, dat.t3$species %in% c("Melanoplus boulderensis"))
 
-g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="4th and 5th")) + geom_line(aes(x=GDDs_binned, y = in3.cper, color="3rd")) +geom_line(aes(x=GDDs_binned, y = in2.cper, color="1st and 2nd"))+facet_grid(species~per)+ geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+theme_classic()+ylab("Development Index")+xlab("Cummulative Growing Degree Days")+theme(legend.position="bottom", text = element_text(size=14))+labs(color="Instar" )+  guides(colour = guide_legend(override.aes = list(size=3)))
+#dat.t3$GDDs_binned= gdds[dat.t3$gdd.bin]
+dat.t3$GDDs_binned= dates[dat.t3$date.bin]
+
+dat.t3$per= factor(dat.t3$per, levels=c("initial","cold","med","warm") )
+dat.t3$species= factor(dat.t3$species, levels=c("Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes","Melanoplus dawsoni"))
+
+g1= ggplot(data=dat.t3) + geom_line(aes(x=GDDs_binned, y = in5.cper, color="4th and 5th")) + 
+  geom_line(aes(x=GDDs_binned, y = in3.cper, color="3rd")) +
+  geom_line(aes(x=GDDs_binned, y = in2.cper, color="1st and 2nd"))+
+  facet_grid(site~per)+ 
+  geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + 
+  geom_ribbon(aes(x = GDDs_binned, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + 
+  geom_ribbon(aes(x = GDDs_binned, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ 
+  geom_ribbon(aes(x = GDDs_binned, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+
+  theme_classic()+ylab("Development Index")+xlab("day of year")+
+  theme(legend.position="bottom", text = element_text(size=14))+labs(color="Instar" )+  
+  guides(colour = guide_legend(override.aes = list(size=3)))
 #+scale_color_manual(values=c("red","green","purple"),labels=c("1st and 2nd","3rd","4th and 5th") )
 
 ## FIGURE SX. Composition

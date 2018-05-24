@@ -171,31 +171,61 @@ hop4= hop4[which(hop4$cdd_sum>0),]
 hop2$elevation= as.factor(elevs[match(hop2$site, sites)])
 hop4$elevation= as.factor(elevs[match(hop4$site, sites)])
 
-#------------
+
+#===============================
+#FIGURE 1
+#ELEVATION PLOTS
+
+#GDDS
+#add elevation
+clim1$elevation= elevs[match(clim1$Site, sites)]
+#fix NAs
+clim1$Cdd_sum[which(is.infinite(clim1$Cdd_sum))]<- NA
+#add period
+clim1$period="resurvey"
+clim1$period[which(clim1$Year<2000)]<-"initial"
+
+#Order by average across sites with complete gdd data
+clim.ave= subset(clim1, clim1$Site %in% c("B1","C1"))
+clim.ave= aggregate(clim.ave, list(clim.ave$Year),FUN=mean )
+clim1$Cdd_siteave= clim.ave$Cdd_sum[match(clim1$Year, clim.ave$Year)]
+
+plot_gdd_elev=ggplot(data=clim1, aes(x=elevation, y = Cdd_sum, group=Year, color=Cdd_siteave, linetype=period))+
+  geom_line()+ 
+  scale_colour_gradientn(name="Mean GDD", colours =matlab.like(10))+
+  theme_bw()+ylab("season growing degree days (C)")+xlab("Elevation (m)")
+#-------
+#Plot ave phenology accross years
+
+#ave across years
+hop.ave= hop4[which(hop4$quantile==50),]
+hop.ave$elevation= as.numeric(as.character(hop.ave$elevation))
+hop.ave= as.data.frame( hop.ave[,c("elevation", "cdd_sum","site","year","ordinal","cdd","species")] )
+hop.ave= aggregate(hop.ave, list(hop.ave$elevation, hop.ave$species),FUN=mean )
+hop.ave$species= hop.ave$Group.2
+
+plot_gdds_elev=ggplot(data=hop.ave, aes(x=elevation, y = cdd, group=species, color=species))+
+  geom_line()+ 
+  theme_bw()+ylab("cummulative growing degree days (C)")+xlab("elevation (m)")+theme(legend.position="none")
+
+plot_doy_elev=ggplot(data=hop.ave, aes(x=elevation, y = ordinal, group=species, color=species))+
+  geom_line()+ 
+  theme_bw()+ylab("day of year")+xlab("elevation (m)")
+
+#----------
+
+#plot together
+fig0= plot_grid(plot_gdd_elev, plot_gdds_elev, plot_doy_elev, labels = c('A', 'B','C'), rel_widths=c(1,0.7,1.3), nrow=1)
+
+pdf("GDD_phen_byElev.pdf", height = 5, width = 12)
+fig0
+dev.off()
+#===============================
+
 #plot
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenology/figures/")
 
 ## FIGURE 2.
-#quantiles
-#By ordinal date
-plot.qs=ggplot(data=hop4, aes(x=cdd_yr, y = ordinal, color=elevation, linetype=quantile))+geom_point(aes(shape=quantile,fill=elevation, alpha=period, stroke=1), size=3)+geom_point(aes(shape=quantile,fill=NULL, stroke=1), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()+ylab("Day of year")+xlab("Season growing degree days (C)")+
-  scale_shape_manual(values = c(21, 22, 23))+
-  scale_alpha_manual(values = c(0.2,0.9))
-
-pdf("PhenQuantiles_byGDD.pdf", height = 12, width = 12)
-plot.qs
-dev.off()
-
-#By GDD 
-plot.cddqs=ggplot(data=hop4, aes(x=cdd_yr, y = cdd_sum, color=elevation, linetype=quantile))+geom_point(aes(shape=quantile,fill=elevation, alpha=period, stroke=1), size=3)+geom_point(aes(shape=quantile,fill=NULL, stroke=1), size=3)+geom_smooth(method="lm",se=F)+facet_wrap(~species, ncol=3) +theme_bw()+ylab("growing degree days (C)")+xlab("Season growing degree days (C)")+
-  scale_shape_manual(values = c(21, 22, 23))+
-  scale_alpha_manual(values = c(0.5,0.9))
-
-pdf("GDDQuantiles_byGDD.pdf", height = 12, width = 12)
-plot.cddqs
-dev.off()
-
-#-------
 #Group by elevation rather than species
 hop4q= subset(hop4, hop4$quantile==50)
 #make elevation factor
@@ -246,177 +276,4 @@ pdf("plot_phen.pdf", height = 12, width = 10)
 plot_grid(plot.phen, plot.phen.gdd, nrow=1, rel_widths=c(1,1.5) )
 dev.off()
 
-#-----------------
-#ALL QUANTILES
-
-#DOY
-plot.phenq=ggplot(data=hop4, aes(x=cdd_yr, y = ordinal, color=species))+
-  geom_point(aes(fill=species, alpha=period, stroke=1), size=3)+
-  geom_point(aes(fill=NULL, stroke=1), size=3)+
-  geom_smooth(method="lm",se=F)+
-  facet_grid(elevation~quantile, scales="free") +
-  theme_bw()+ylab("day of year")+xlab("season growing degree days (C)")+
-  scale_shape_manual(values = c(21, 22, 23))+
-  scale_alpha_manual(values = c(0.2,0.9))
-
-#GDD
-plot.phenq.gdd=ggplot(data=hop4, aes(x=cdd_yr, y = cdd, color=species))+
-  geom_point(aes(fill=species, alpha=period, stroke=1), size=3)+
-  geom_point(aes(fill=NULL, stroke=1), size=3)+
-  geom_smooth(method="lm",se=F)+
-  facet_grid(elevation~quantile, scales="free") +
-  theme_bw()+ylab("cummulative growing degree days")+xlab("season growing degree days (C)")+
-  scale_shape_manual(values = c(21, 22, 23))+
-  scale_alpha_manual(values = c(0.2,0.9))
-
-#----
-pdf("plot_phenq.pdf", height = 12, width = 10)
-plot.phenq
-dev.off()
-
-pdf("plot_phenq_gdd.pdf", height = 12, width = 10)
-plot.phenq.gdd
-dev.off()
-
-#--------------
-#STATS
-
-##ordinal date
-mod1= lm(ordinal~cdd_yr*species+elevation+period, data=hop4)
-
-#by species
-i=1
-hop.sp= subset(hop4, hop4$species=specs[i])
-mod1= lm(ordinal~cdd_yr*elevation+period, data=hop.sp)
-summary(mod1)
-
-##GDD
-mod1= lm(cdd_sum~cdd_yr*species+elevation+period, data=hop4)
-
-#by species
-i=1
-hop.sp= subset(hop4, hop4$species=specs[i])
-mod1= lm(cdd_sum~cdd_yr*elevation+period, data=hop.sp)
-summary(mod1)
-
-#-------------
-#STATS
-hopq= subset(hop4, hop4$quantile==50)
-mod1= lm(ordinal~cdd_yr*elevation+species+period,  data=hopq)
-
-#split by species
-i=1
-hopq.sp= subset(hopq, hopq$species== specs[i])
-mod1= lm(ordinal~cdd_yr*elevation+period,  data=hopq.sp)
-mod1= lm(cdd_sum~cdd_yr*elevation+period,  data=hopq.sp)
-summary(mod1)
-
-#===============================
-#ELEVATION PLOTS
-
-#GDDS
-#add elevation
-clim1$elevation= elevs[match(clim1$Site, sites)]
-#fix NAs
-clim1$Cdd_sum[which(is.infinite(clim1$Cdd_sum))]<- NA
-#add period
-clim1$period="resurvey"
-clim1$period[which(clim1$Year<2000)]<-"initial"
-
-#Order by average across sites with complete gdd data
-clim.ave= subset(clim1, clim1$Site %in% c("B1","C1"))
-clim.ave= aggregate(clim.ave, list(clim.ave$Year),FUN=mean )
-clim1$Cdd_siteave= clim.ave$Cdd_sum[match(clim1$Year, clim.ave$Year)]
-
-plot_gdd_elev=ggplot(data=clim1, aes(x=elevation, y = Cdd_sum, group=Year, color=Cdd_siteave, linetype=period))+
-  geom_line()+ 
-  scale_colour_gradientn(name="Mean GDD", colours =matlab.like(10))+
-  theme_bw()+ylab("season growing degree days (C)")+xlab("Elevation (m)")
-#-------
-#Plot ave phenology accross years
-
-#ave across years
-hop.ave= hop4[which(hop4$quantile==50),]
-hop.ave$elevation= as.numeric(as.character(hop.ave$elevation))
-hop.ave= as.data.frame( hop.ave[,c("elevation", "cdd_sum","site","year","ordinal","cdd","species")] )
-hop.ave= aggregate(hop.ave, list(hop.ave$elevation, hop.ave$species),FUN=mean )
-hop.ave$species= hop.ave$Group.2
-
-plot_gdds_elev=ggplot(data=hop.ave, aes(x=elevation, y = cdd, group=species, color=species))+
-  geom_line()+ 
-  theme_bw()+ylab("cummulative growing degree days (C)")+xlab("elevation (m)")+theme(legend.position="none")
-
-plot_doy_elev=ggplot(data=hop.ave, aes(x=elevation, y = ordinal, group=species, color=species))+
-  geom_line()+ 
-  theme_bw()+ylab("day of year")+xlab("elevation (m)")
-
-#----------
-
-#plot together
-fig0= plot_grid(plot_gdd_elev, plot_gdds_elev, plot_doy_elev, labels = c('A', 'B','C'), rel_widths=c(1,0.7,1.3), nrow=1)
-
-pdf("GDD_phen_byElev.pdf", height = 5, width = 12)
-fig0
-dev.off()
-
-#====================================
-#ADDITIONAL GDD PLOTS
-
-#subset to years
-clim2= clim[which(clim$Year %in% c(1958:1960,2006:2015)),]
-#subset sites
-clim2= clim2[which(clim2$Site %in% c("A1","B1","C1","CHA")),]
-
-#add elevation
-clim2$elevation= as.factor(elevs[match(clim2$Site, sites)])
-
-clim2$cdd= clim2$cdd_sum
-
-#code period
-clim2$period<-"resurvey"
-clim2$period[which(clim2$Year<1961)]="initial"
-
-clim2$sj= paste(clim2$elevation, clim2$Year, sep="_")
-
-#change elevation labels
-clim2$SiteElev= clim2$elevation
-levels(clim2$SiteElev)<- c("1752m", "2195m", "2591m", "3048m")
-
-#plot GDD accumulation over time
-#gdd.plot= ggplot(data=clim2, aes(x=Julian, y = cdd, color=as.factor(Year) ) )+geom_line(aes(linetype=period), size=1)+facet_grid(.~elevation, scales="free_y") +theme_bw()+ scale_linetype_manual(breaks=c("initial","resurvey"), values=c("dashed","solid"))
-
-gdd.plot= ggplot(data=clim2, aes(x=Julian, y = cdd, color=rev(period), group=sj) )+geom_line(size=1)+facet_grid(.~SiteElev, scales="free_y") +theme_bw()+xlab("Day of year")+ylab("Cummulative growing degree days")+labs(color="Survey period" )+theme(legend.position="bottom")+scale_color_manual(values=c("black","gray"),labels=c("initial","resurvey") )
-
-##FIGURE 1
-
-#min ordinal date by dd, #plot regression
-pdf("GDD_plot.pdf", height = 7, width = 10)
-gdd.plot
-dev.off()
-
-#------------------------------ 
-#plot initial, recent GDDs
-
-hop2$min.cdd=NA
-hop2$mean.cdd=NA
-
-clim$cdd= clim$cdd_sum
-
-#gdd at 1st appearance
-hop.m= paste(hop2$siteyear,hop2$min,sep="")
-clim.m= paste(clim$Site, clim$Year, clim$Julian,sep="")
-#clim2[which(clim$Site==hop2$site[1] & clim$Year==hop2$year[1] & clim$Julian==hop2$min[1]),]
-match1= match(hop.m,clim.m)
-matched= which(!is.na(match1))
-hop2$min.cdd[matched]<- clim$cdd[match1[matched]]  
-
-#gdd at peak
-hop.m= paste(hop2$siteyear,round(hop2$mean),sep="")
-match1= match(hop.m,clim.m)
-matched= which(!is.na(match1))
-hop2$mean.cdd[matched]<- clim$cdd[match1[matched]] 
-
-#gdd at 1st appearance
-ggplot(data=hop2, aes(x=year, y = min.cdd, color=species))+geom_point()+geom_line()+facet_grid(.~site) +theme_bw()+ theme(legend.position = "bottom")
-#gdd at peak
-ggplot(data=hop2, aes(x=year, y = mean.cdd, color=species))+geom_point()+geom_line()+facet_grid(.~site) +theme_bw()+ theme(legend.position = "bottom")
+#===============
