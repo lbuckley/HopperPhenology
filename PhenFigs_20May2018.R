@@ -47,13 +47,14 @@ clim1[clim1$Julian<60 | clim1$Julian>243,"Mean_summer"]=NA
 
 #metrics across years
 clim1= ddply(clim1, c("Site", "Year"), summarise,
-             Mean = mean(Mean_summer, na.rm=TRUE), Sd = sd(Mean_summer, na.rm=TRUE),Cdd_sum = max(cdd_sum, na.rm=TRUE),Cdd_june = max(cdd_june, na.rm=TRUE),Cdd_july = max(cdd_july, na.rm=TRUE),Cdd_aug = max(cdd_aug, na.rm=TRUE),Cdd_early = max(cdd_early, na.rm=TRUE),Cdd_mid = max(cdd_mid, na.rm=TRUE),Cdd_ac = max(cdd_ac, na.rm=TRUE),Cdd_mb = max(cdd_mb, na.rm=TRUE),Cdd_ms = max(cdd_ms, na.rm=TRUE), Sem = sd(Mean_summer, na.rm=TRUE)/sqrt(length(na.omit(Mean_summer))))
+             Mean = mean(Mean_summer, na.rm=FALSE), Cdd_seas = max(cdd_sum, na.rm=FALSE) )
+         #    Mean = mean(Mean_summer, na.rm=TRUE), Sd = sd(Mean_summer, na.rm=TRUE),Cdd_seas = max(cdd_sum, na.rm=TRUE),Cdd_june = max(cdd_june, na.rm=TRUE),Cdd_july = max(cdd_july, na.rm=TRUE),Cdd_aug = max(cdd_aug, na.rm=TRUE),Cdd_early = max(cdd_early, na.rm=TRUE),Cdd_mid = max(cdd_mid, na.rm=TRUE),Cdd_ac = max(cdd_ac, na.rm=TRUE),Cdd_mb = max(cdd_mb, na.rm=TRUE),Cdd_ms = max(cdd_ms, na.rm=TRUE), Sem = sd(Mean_summer, na.rm=TRUE)/sqrt(length(na.omit(Mean_summer))))
 
 #PLOTS
 #temp
 ggplot(data=clim1, aes(x=Year, y = Mean, color=Site ))+geom_point()+geom_line() +theme_bw()
 #cum dd
-ggplot(data=clim1, aes(x=Year, y = Cdd_sum, color=Site ))+geom_point()+geom_line() +theme_bw()
+ggplot(data=clim1, aes(x=Year, y = Cdd_seas, color=Site ))+geom_point()+geom_line() +theme_bw()
 
 #---------
 # Jadult and GDDadult ~year by sites
@@ -66,25 +67,9 @@ specs= c("Aeropedellus clavatus","Chloealtis abdominalis","Camnula pellucida","M
 
 hop1= hop1[which(hop1$species %in% specs ),]
 
-#metrics across years
-hop2= ddply(hop1, c("site", "year","species","period"), summarise,
-             min = min(ordinal, na.rm=TRUE), mean = mean(ordinal, na.rm=TRUE) )
+#trim columns
+hop1= hop1[,c("ordinal","species","in6","in5","in4","in3","in2","in1","total","site","period","year","sjy","cdd_sum")]
 
-#order species by seasonal timing
-#ave phen
-#hop.el = hop1 %>% group_by(species,site) %>% arrange(species,site) %>% mutate(phen = mean(ordinal))
-hop.agg= aggregate(hop1, list(hop1$species),FUN=mean) #fix for hop1$site,
-hop.agg= hop.agg[order(hop.agg$ordinal),]
-
-#make species factor for plotting
-hop1$species= factor(hop1$species, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes", "Melanoplus dawsoni", "Chloealtis abdominalis"))
-hop2$species= factor(hop2$species, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes", "Melanoplus dawsoni", "Chloealtis abdominalis"))
-
-#min ordinal date
-ggplot(data=hop2, aes(x=year, y = min, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
-#mean ordinal date
-ggplot(data=hop2, aes(x=year, y = mean, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
- 
 #-------------
 ## calculate median across individuals
 hop1= hop1[order(hop1$ordinal),]
@@ -116,71 +101,29 @@ hop4=hop5 #add quantiles
 
 #-----------------
 # match phenology to temp and dd
-
 clim1$siteyear= paste(clim1$Site, clim1$Year, sep="")
-hop2$siteyear= paste(hop2$site, hop2$year, sep="")
 hop4$siteyear= paste(hop4$site, hop4$year, sep="")
 
-hop2$Tmean=NA
-match1= match(hop2$siteyear, clim1$siteyear)
-matched= which(!is.na(match1))
-hop2$Tmean[matched]<- clim1$Mean[match1[matched]]  
-
-hop2$cdd_yr=NA
-hop2$cdd_yr[matched]<- clim1$Cdd_sum[match1[matched]]  
-
-#----------------------------------------------
-hop4$Tmean=NA
+hop4$Tmean<-NA
 match1= match(hop4$siteyear, clim1$siteyear)
 matched= which(!is.na(match1))
 hop4$Tmean[matched]<- clim1$Mean[match1[matched]]  
 
-hop4$cdd_yr=NA
-hop4$cdd_yr[matched]<- clim1$Cdd_sum[match1[matched]]  
+hop4$cdd_seas<-NA
+hop4$cdd_seas[matched]<- clim1$Cdd_seas[match1[matched]]  
 
-#----------------------------------------------
-
-#TEMP PLOTS
-#min ordinal date by temp
-hop2= hop2[order(hop2$Tmean),]
-ggplot(data=hop2, aes(x=Tmean, y = min, color=site,shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
-#mean ordinal date by temp
-ggplot(data=hop2, aes(x=Tmean, y = mean, color=site,shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
-#median individual ordinal by temp
-ggplot(data=hop4, aes(x=Tmean, y = ordinal, color=site,shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
-
-#------------------
-#GDD PLOTS
-
-##Specify cdd metric
-hop2$cdd=NA; hop4$cdd=NA
-hop2$cdd=hop2$cdd_sum; hop4$cdd=hop4$cdd_sum
-
-#min ordinal date by dd
-ggplot(data=hop2, aes(x=cdd, y = min, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
-#mean ordinal date by dd
-ggplot(data=hop2, aes(x=cdd, y = mean, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
-#median individual ordinal by dd
-ggplot(data=hop4, aes(x=cdd, y = ordinal, color=site, shape=period))+geom_point()+geom_line()+facet_wrap(~species, ncol=3) +theme_bw()
-  
-#drop sites with missing gdd data
-hop2= hop2[which(hop2$cdd_sum>0),]
-hop4= hop4[which(hop4$cdd_sum>0),]
-
+#---------------
 #add elevation
-hop2$elevation= as.factor(elevs[match(hop2$site, sites)])
 hop4$elevation= as.factor(elevs[match(hop4$site, sites)])
 
-
-#===============================
+#==============================================
+#==============================================
 #FIGURE 1
 #ELEVATION PLOTS
 
 #GDDS
 #add elevation
 clim1$elevation= elevs[match(clim1$Site, sites)]
-#fix NAs
-clim1$Cdd_sum[which(is.infinite(clim1$Cdd_sum))]<- NA
 #add period
 clim1$period="resurvey"
 clim1$period[which(clim1$Year<2000)]<-"initial"
@@ -188,9 +131,9 @@ clim1$period[which(clim1$Year<2000)]<-"initial"
 #Order by average across sites with complete gdd data
 clim.ave= subset(clim1, clim1$Site %in% c("B1","C1"))
 clim.ave= aggregate(clim.ave, list(clim.ave$Year),FUN=mean )
-clim1$Cdd_siteave= clim.ave$Cdd_sum[match(clim1$Year, clim.ave$Year)]
+clim1$Cdd_siteave= clim.ave$Cdd_seas[match(clim1$Year, clim.ave$Year)]
 
-plot_gdd_elev=ggplot(data=clim1, aes(x=elevation, y = Cdd_sum, group=Year, color=Cdd_siteave, linetype=period))+
+plot_gdd_elev=ggplot(data=clim1, aes(x=elevation, y = Cdd_seas, group=Year, color=Cdd_siteave, linetype=period))+
   geom_line()+ 
   scale_colour_gradientn(name="Mean GDD", colours =matlab.like(10))+
   theme_bw()+ylab("season growing degree days (C)")+xlab("Elevation (m)")
@@ -200,11 +143,11 @@ plot_gdd_elev=ggplot(data=clim1, aes(x=elevation, y = Cdd_sum, group=Year, color
 #ave across years
 hop.ave= hop4[which(hop4$quantile==50),]
 hop.ave$elevation= as.numeric(as.character(hop.ave$elevation))
-hop.ave= as.data.frame( hop.ave[,c("elevation", "cdd_sum","site","year","ordinal","cdd","species")] )
+hop.ave= as.data.frame( hop.ave[,c("elevation", "cdd_sum","site","year","ordinal","cdd_seas","species")] )
 hop.ave= aggregate(hop.ave, list(hop.ave$elevation, hop.ave$species),FUN=mean )
 hop.ave$species= hop.ave$Group.2
 
-plot_gdds_elev=ggplot(data=hop.ave, aes(x=elevation, y = cdd, group=species, color=species))+
+plot_gdds_elev=ggplot(data=hop.ave, aes(x=elevation, y = cdd_sum, group=species, color=species))+
   geom_line()+ 
   theme_bw()+ylab("cummulative growing degree days (C)")+xlab("elevation (m)")+theme(legend.position="none")
 
@@ -236,8 +179,8 @@ hop4q$elevation= factor(hop4q$elevation, levels=c(3048,2591,2195,1752) )
 hop4q$elevspec= paste(hop4q$elevation, hop4q$species, sep="")
 elevspec= matrix(unique(hop4q$elevspec))
 #extract p-values
-p.doy= apply(elevspec,1, FUN=function(x) summary(lm(hop4q$ordinal[which(hop4q$elevation==substr(x,1,4)&hop4q$species==substr(x,5,nchar(x)))] ~ hop4$cdd_yr[which(hop4q$elevation==substr(x,1,4)&hop4q$species==substr(x,5,nchar(x)) )]) )$coefficients[2,4])
-p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(hop4q$cdd_yr[which(hop4q$elevation==substr(x,1,4)&hop4q$species==substr(x,5,nchar(x)))] ~ hop4$cdd_yr[which(hop4q$elevation==substr(x,1,4)&hop4q$species==substr(x,5,nchar(x)) )]) )$coefficients[2,4])
+p.doy= apply(elevspec,1, FUN=function(x) summary(lm(hop4q$ordinal[which(hop4q$elevation==substr(x,1,4)&hop4q$species==substr(x,5,nchar(x)))] ~ hop4$cdd_seas[which(hop4q$elevation==substr(x,1,4)&hop4q$species==substr(x,5,nchar(x)) )]) )$coefficients[2,4])
+p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(hop4q$cdd_sum[which(hop4q$elevation==substr(x,1,4)&hop4q$species==substr(x,5,nchar(x)))] ~ hop4$cdd_seas[which(hop4q$elevation==substr(x,1,4)&hop4q$species==substr(x,5,nchar(x)) )]) )$coefficients[2,4])
 #combine
 p.mat=as.data.frame(cbind(elevspec,p.doy,p.gdd))
 #add columns for significance
@@ -252,7 +195,7 @@ hop4q$sig.doy= factor(p.mat[match1,"sig.doy"], levels=c("significant","ns"))
 hop4q$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","ns"))
 
 #DOY
-plot.phen=ggplot(data=hop4q, aes(x=cdd_yr, y = ordinal, color=species))+
+plot.phen=ggplot(data=hop4q, aes(x=cdd_seas, y = ordinal, color=species))+
   geom_point(aes(shape=period, fill=species, alpha=period, stroke=1), size=3)+
   geom_point(aes(shape=period, fill=NULL, stroke=1), size=3)+
   geom_smooth(method="lm",se=F, aes(linetype=sig.doy))+
@@ -262,7 +205,7 @@ plot.phen=ggplot(data=hop4q, aes(x=cdd_yr, y = ordinal, color=species))+
   scale_alpha_manual(values = c(0.2,0.9))+theme(legend.position="none")
 
 #GDD
-plot.phen.gdd=ggplot(data=hop4q, aes(x=cdd_yr, y = cdd, color=species))+
+plot.phen.gdd=ggplot(data=hop4q, aes(x=cdd_seas, y = cdd_sum, color=species))+
   geom_point(aes(shape=period, fill=species, alpha=period, stroke=1), size=3)+
   geom_point(aes(shape=period, fill=NULL, stroke=1), size=3)+
   geom_smooth(method="lm",se=F, aes(linetype=sig.gdd))+
@@ -276,4 +219,136 @@ pdf("plot_phen.pdf", height = 12, width = 10)
 plot_grid(plot.phen, plot.phen.gdd, nrow=1, rel_widths=c(1,1.5) )
 dev.off()
 
-#===============
+#====================================
+## FIGURE 3.
+# DEVELOPMENT INDEX
+
+dat=hop[,c("ordinal","species","in6","in5","in4","in3","in2","in1","total","year","site","period","sjy","cdd_sum")]
+
+#replace instar NAs with zero
+dat[which(is.na(dat$in1)), "in1"]=0 
+dat[which(is.na(dat$in2)), "in2"]=0
+dat[which(is.na(dat$in3)), "in3"]=0
+dat[which(is.na(dat$in4)), "in4"]=0
+dat[which(is.na(dat$in5)), "in5"]=0
+dat[which(is.na(dat$in6)), "in6"]=0
+
+#Calculate development index
+dat$DI=0
+inds=which(dat$total>0)  
+dat$DI[inds]= (dat$in1[inds] +dat$in2[inds]*2 +dat$in3[inds]*3 +dat$in4[inds]*4 +dat$in5[inds]*5 +dat$in6[inds]*6)/dat$total[inds]
+
+#ANALYSIS
+specs= c("Aeropedellus clavatus", "Camnula pellucida", "Melanoplus dawsoni", "Melanoplus sanguinipes", "Melanoplus boulderensis")
+
+#reduce to focal species
+dat= dat[dat$species %in% specs[2:5],]
+
+#code period
+dat$per=1
+dat$per[dat$year>2000]=2
+
+#code early and late species
+dat$early_late=2
+dat$early_late[dat$species %in% specs[c(2,4)]]=1
+
+#add elevation
+dat$elev= as.factor(elevs[match(dat$site, sites)])
+
+#add seasonal GDDs
+dat$siteyear= paste(dat$site, dat$year, sep="")
+
+dat$Tmean<-NA
+match1= match(dat$siteyear, clim1$siteyear)
+matched= which(!is.na(match1))
+dat$Tmean[matched]<- clim1$Mean[match1[matched]]  
+
+dat$cdd_seas<-NA
+dat$cdd_seas[matched]<- clim1$Cdd_seas[match1[matched]]  
+
+#------------------------------------------------------------
+#PLOTS
+dat$species= as.factor(dat$species)
+dat$year= as.factor(dat$year)
+
+#get rid of entries with low sample size: at least three individuals, #but keep if all first instar or adult
+drop= which(dat$total<3) # & dat$DI!=1 & dat$DI!=6
+if(length(drop)>0) dat=dat[-drop,]
+
+#--------------------
+#DEVELOPMENTAL INDEX
+#Plot DI by ordinal date
+di.plot= ggplot(data=dat, aes(x=ordinal, y = DI, color=cdd_seas, group=siteyear, linetype=period))+facet_grid(species~elev) +
+  theme_bw()+geom_smooth(se=FALSE)+
+  scale_colour_gradientn(colours =matlab.like(10))
+#***** 
+
+#Plot DI by GDD
+dat$cdd= dat$cdd_sum
+di.plot= ggplot(data=dat, aes(x=cdd_sum, y = DI, color=year))+facet_grid(species~elev) +geom_point(aes(shape=period), size=2)+theme_bw()+geom_line()+xlim(0,600)
+#note xlim restricted
+
+#==============================================================================
+##Bin by GDD
+gdds= seq( min(dat$cdd_sum, na.rm=TRUE), max(dat$cdd_sum, na.rm=TRUE), length.out=20) #CHANGE NUMBER GDD BINS
+dat$gdd.bin= cut(dat$cdd_sum, breaks = gdds, labels=FALSE)
+
+dat.gddbin = dat %>% group_by(species,site,year,gdd.bin) %>% summarise_each(funs(mean))
+
+##Bin by date
+dates= seq( min(dat$ordinal, na.rm=TRUE)-1, max(dat$ordinal, na.rm=TRUE)+1, 20)
+dat$date.bin= cut(dat$ordinal, breaks = dates, labels=FALSE, include.highest=TRUE)
+
+dat.datebin = dat %>% group_by(species,site,year,date.bin) %>% summarise_each(funs(mean))
+
+#----------------
+#group by seasonal GDD
+#drop sites without data
+clim.seas2= clim1[which(clim1$Site %in% c("B1","C1")),]
+clim.seas2= clim.seas2 %>% group_by(Year) %>% summarise(Cdd_seas= mean(Cdd_seas) )
+clim.seas2= clim.seas2[order(clim.seas2$Cdd_seas),]
+
+#------
+#CODE BY GDD
+#initial 1958,1959,1960
+#cold 2009,2010,2014
+#med 2008,2011,2013,2015
+#warm 2006, 2007,2012
+
+dat$per=NA
+dat$per[which(dat$year %in% c(1958,1959,1960) )]="initial"
+dat$per[which(dat$year %in% c(2009,2010,2014) )]="cold"
+dat$per[which(dat$year %in% c(2008,2011,2013,2015) )]="med"
+dat$per[which(dat$year %in% c(2006,2007,2012) )]="warm"
+
+#--------------------------
+#PLOT DI by grouped years
+
+#average across years
+dat$gdd.binned= gdds[dat$gdd.bin]
+dat2= dat %>% group_by(species,elev, site, per,gdd.binned) %>%  mutate(DI=mean(DI) )
+
+#order varaibles
+#period
+dat$per= factor(dat$per, levels=c("initial","cold","med","warm") )
+#elevation
+dat$elev= factor(dat$elev, levels=c(3048,2591,2195,1752) )
+#species
+dat$species= factor(dat$species, levels=c("Melanoplus boulderensis", "Camnula pellucida", "Melanoplus sanguinipes", "Melanoplus dawsoni") )
+
+#DEVELOPMENTAL INDEX
+#Plot DI by ordinal date
+di.plot= ggplot(data=dat, aes(x=ordinal, y = DI, color=per))+facet_grid(elev~species) +
+  theme_bw()+geom_smooth(se=F) +
+  scale_color_manual(values=c("black", "blue", "green","red") ) +
+  theme_bw()+ylab("development index")+xlab("day of year")+labs(color="season")
+#scale_linetype_manual(values=c("dashed", "solid", "solid","solid") ) +
+#+ geom_point(aes(shape=period), size=2)
+## USE FIG? *************
+
+ggplot(data=dat, aes(x=ordinal, y = DI, color=year))+facet_grid(elev~species) +
+  theme_bw()+geom_smooth(se=F) +
+  scale_color_manual(values=c("black", "blue", "green","red") ) +
+  theme_bw()+ylab("development index")+xlab("day of year")+labs(color="season")
+
+
