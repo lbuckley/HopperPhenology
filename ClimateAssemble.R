@@ -10,12 +10,14 @@ library(zoo)
 #3. Linearly interpolated data with a maximum gap of 6: B1 2012, C1 2013, C1 2015, A1 2010 
 
 #source degree days function
-setwd("C:\\Users\\Buckley\\Documents\\HopperPhenology\\")
+#setwd("C:\\Users\\Buckley\\Documents\\HopperPhenology\\")
+setwd("/Users/laurenbuckley/HopperPhenology/")
 source("degreedays.R")
 
 #--------------------------------------
-fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
+#fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
 #fdir= "C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
+fdir= "/Volumes/GoogleDrive/My\ Drive/AlexanderResurvey/DataForAnalysis/"
 
 #load climate data
 setwd( paste(fdir, "climate", sep="") )   
@@ -38,7 +40,7 @@ clim= rbind(clim.a1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean")
 
 #------
 #load recent climate data from Cesar
-setwd( paste(fdir, "climate\\Recent\\", sep="") )  
+setwd( paste(fdir, "climate/Recent/", sep="") )  
 
 #columns: "Site","Date","Year","Month","Julian","Max","Min","Mean"
 
@@ -99,7 +101,7 @@ clim= rbind(clim, clim.c1.2014[,c("Site","Date","Year","Month","Julian","Max","M
 
 #------
 #load and process LTER data
-setwd( paste(fdir, "climate\\LTERdownload_Recent\\", sep="") )  
+setwd( paste(fdir, "climate/LTERdownload_Recent/", sep="") )  
 
 #A1
 a1= read.csv("a-1hobo.hourly.jm.data.csv") #2013-2014
@@ -196,11 +198,11 @@ sites <- c("A1", "B1", "C1", "NOAA")
 years <- c(1958:1960, 2006:2015)
 allClim <- droplevels(clim1[clim1$Site %in% sites & clim1$Year %in% years,])
 
-# Subset to ordinal dates relevant for grasshopper season (March 1 to Aug 31 = ordinal 60 to 243)
-allClim <- allClim[allClim$Julian > 59 & allClim$Julian < 244,]
+# Subset to ordinal dates relevant for grasshopper season (March 1 to Aug 31 = ordinal 60 to 243) #extend to 290
+allClim <- allClim[allClim$Julian > 59 & allClim$Julian < 290,]
 
 #set up data frame with all combinations
-clim1 = expand.grid(Site=sites, Julian = 60:243, Year = years)
+clim1 = expand.grid(Site=sites, Julian = 60:290, Year = years)
 #set up columns
 clim1$Max=NA; clim1$Min=NA; clim1$Mean=NA
 #columns for matching
@@ -216,7 +218,7 @@ clim1 <- clim1[order(clim1$Site, clim1$Year, clim1$Julian),]
 
 #---------------------
 #Update climate data
-setwd( paste(fdir, "climate\\Recent\\", sep="") ) 
+setwd( paste(fdir, "climate/Recent/", sep="") ) 
 
 #Fix B1 2009 data
 clim.b1.2009.tmax= read.csv( "B1_2009_Tmax.csv" )
@@ -317,6 +319,10 @@ clim$dd[inds]= apply( clim[inds,c("Min","Max")], MARGIN=1, FUN=degree.days.mat, 
 clim$dd_sum=clim$dd
 clim[which(clim$Julian<60 | clim$Julian>243),"dd_sum"]<-0
 
+#add fall
+clim$dd_sumfall=clim$dd
+clim[which(clim$Julian<60),"dd_sumfall"]<-0
+
 clim$dd_june=clim$dd
 clim[which(clim$Julian<152 | clim$Julian>181),"dd_june"]<-0
 
@@ -344,7 +350,7 @@ clim[which(clim$Julian<(224-30) | clim$Julian>(224+30) ),"dd_ms"]<-0
 #=========================
 #WRITE OUT
 setwd( paste(fdir, "climate", sep="") )   
-write.csv(clim,"AlexanderClimateAll_filled.csv")
+write.csv(clim,"AlexanderClimateAll_filled_May2018.csv")
 
 #--------------------------
 #CHECK DATA

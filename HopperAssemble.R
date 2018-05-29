@@ -7,25 +7,27 @@ sites= c("CHA", "A1", "B1", "C1", "D1")  #Redfox: 1574
 elevs= c(1752, 2195, 2591, 3048, 3739)
 
 #source degree days function
-setwd("C:\\Users\\Buckley\\Documents\\HopperPhenology\\")
+setwd("/Users/laurenbuckley/HopperPhenology/")
 source("degreedays.R")
 
 #--------------------------------------
-fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
+#fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
 #fdir= "C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
+fdir= "/Volumes/GoogleDrive/My\ Drive/AlexanderResurvey/DataForAnalysis/"
 
 #load climate data
 setwd( paste(fdir, "climate", sep="") )   
-clim= read.csv("AlexanderClimateAll_filled.csv")
+clim= read.csv("AlexanderClimateAll_filled_May2018.csv")
 
 #---------------------
 #cummulative degree days
 #cumsum within groups
-clim = clim %>% group_by(Year,Site) %>% arrange(Julian) %>% mutate(cdd_sum = cumsum(dd_sum),cdd_june = cumsum(dd_june),cdd_july = cumsum(dd_july),cdd_aug = cumsum(dd_aug),cdd_early = cumsum(dd_early),cdd_mid = cumsum(dd_mid),cdd_ac = cumsum(dd_ac),cdd_mb = cumsum(dd_mb),cdd_ms = cumsum(dd_ms) ) 
+clim = clim %>% group_by(Year,Site) %>% arrange(Julian) %>% mutate(cdd_sum = cumsum(dd_sum), cdd_sumfall = cumsum(dd_sumfall)) 
+# cdd_june = cumsum(dd_june),cdd_july = cumsum(dd_july),cdd_aug = cumsum(dd_aug),cdd_early = cumsum(dd_early),cdd_mid = cumsum(dd_mid),cdd_ac = cumsum(dd_ac),cdd_mb = cumsum(dd_mb),cdd_ms = cumsum(dd_ms)
 
 #========================================================================
 #load hopper data
-setwd( paste(fdir, "grasshoppers\\SexCombined\\", sep="") )
+setwd( paste(fdir, "grasshoppers/SexCombined/", sep="") )
 
 hop.b1= read.csv( "B1_1959-2015_eggDiapause.csv" )
 hop.c1= read.csv( "C1_1959-2015_eggDiapause.csv" )
@@ -81,14 +83,17 @@ hop$sjy= paste(hop$site, hop$ordinal, hop$year, sep="_")
 match1= match(hop$sjy,clim$sjy)
 matched= which(!is.na(match1))
 
-hop$dd_sum=NA;hop$cdd_sum=NA; hop$cdd_june=NA; hop$cdd_july=NA; hop$cdd_aug=NA; hop$cdd_early=NA; hop$cdd_mid=NA; hop$cdd_ac=NA; hop$cdd_mb=NA; hop$cdd_ms=NA
+hop$dd=NA;hop$dd_sum=NA;hop$cdd_sum=NA; hop$cdd_sumfall=NA;
+#hop$cdd_june=NA; hop$cdd_july=NA; hop$cdd_aug=NA; hop$cdd_early=NA; hop$cdd_mid=NA; hop$cdd_ac=NA; hop$cdd_mb=NA; hop$cdd_ms=NA
 
-hop[matched,c("dd_sum","cdd_sum","cdd_june","cdd_july","cdd_aug","cdd_early","cdd_mid","cdd_ac","cdd_mb","cdd_ms")]= clim[match1[matched], c("dd_sum","cdd_sum","cdd_june","cdd_july","cdd_aug","cdd_early","cdd_mid","cdd_ac","cdd_mb","cdd_ms")]
+hop[matched,c("dd","dd_sum","cdd_sum","cdd_sumfall")]= clim[match1[matched], c("dd","dd_sum","cdd_sum","cdd_sumfall")]
+#"cdd_june","cdd_july","cdd_aug","cdd_early","cdd_mid","cdd_ac","cdd_mb","cdd_ms"
+
 #-------------------------------------
 
 #Write hopper data out
-setwd( paste(fdir, "grasshoppers\\SexCombined\\", sep="") )
-#write.csv(hop, "HopperData.csv")
+setwd( paste(fdir, "grasshoppers/SexCombined/", sep="") )
+#write.csv(hop, "HopperData_May2018.csv")
 
 #======================================================
 #ASSESS A1 data
