@@ -129,15 +129,19 @@ clim1$elevation= elevs[match(clim1$Site, sites)]
 clim1$period="resurvey"
 clim1$period[which(clim1$Year<2000)]<-"initial"
 
+#order varaibles
+#period
+clim1$period= factor(clim1$period, levels=c("resurvey", "initial") )
+
 #Order by average across sites with complete gdd data
 clim.ave= subset(clim1, clim1$Site %in% c("B1","C1"))
 clim.ave= aggregate(clim.ave, list(clim.ave$Year),FUN=mean )
 clim1$Cdd_siteave= clim.ave$Cdd_seas[match(clim1$Year, clim.ave$Year)]
 
 plot_gdd_elev=ggplot(data=clim1, aes(x=elevation, y = Cdd_seas, group=Year, color=Cdd_siteave, linetype=period))+
-  geom_line()+ 
-  scale_colour_gradientn(name="Mean GDD", colours =matlab.like(10))+
-  theme_bw()+ylab("season growing degree days (C)")+xlab("Elevation (m)")
+  geom_line()+ #geom_point()+
+  scale_colour_gradientn(name="mean season gdd", colours =matlab.like(10))+
+  theme_bw()+ylab("season growing degree days (C)")+xlab("elevation (m)")
 #-------
 #Plot ave phenology accross years
 
@@ -148,24 +152,24 @@ hop.ave= as.data.frame( hop.ave[,c("elevation", "cdd_sum","site","year","ordinal
 hop.ave= aggregate(hop.ave, list(hop.ave$elevation, hop.ave$species),FUN=mean )
 hop.ave$species= hop.ave$Group.2
 
-specs= c("Aeropedellus clavatus", "Camnula pellucida", "Melanoplus dawsoni", "Melanoplus sanguinipes", "Melanoplus boulderensis")
+#specs= c("Aeropedellus clavatus", "Camnula pellucida", "Melanoplus dawsoni", "Melanoplus sanguinipes", "Melanoplus boulderensis")
 #reduce to focal species
-hop.ave= hop.ave[hop.ave$species %in% specs[2:5],]
+hop.ave= hop.ave[hop.ave$species %in% specs,]
 
 plot_gdds_elev=ggplot(data=hop.ave, aes(x=elevation, y = cdd_sum, group=species, color=species))+
-  geom_line()+ 
+  geom_line()+ geom_point()+
   theme_bw()+ylab("cummulative growing degree days (C)")+xlab("elevation (m)")
 
 plot_doy_elev=ggplot(data=hop.ave, aes(x=elevation, y = ordinal, group=species, color=species))+
-  geom_line()+ 
+  geom_line()+ geom_point()+
   theme_bw()+ylab("day of year")+xlab("elevation (m)")+theme(legend.position="none")
 
 #----------
 
 #plot together
-fig0= plot_grid(plot_gdd_elev, plot_doy_elev, plot_gdds_elev, labels = c('A', 'B','C'), rel_widths=c(1,0.7,1.3), nrow=1)
+fig0= plot_grid(plot_gdd_elev, plot_doy_elev, plot_gdds_elev, labels = c('A', 'B','C'), rel_widths=c(1.2,0.75,1.3), nrow=1)
 
-pdf("GDD_phen_byElev.pdf", height = 5, width = 12)
+pdf("Fig1_GDD_phen_byElev.pdf", height = 5, width = 12)
 fig0
 dev.off()
 #===============================
@@ -224,7 +228,7 @@ plot.phen.gdd=ggplot(data=hop4q, aes(x=cdd_seas, y = cdd_sum, color=species))+
   scale_alpha_manual(values = c(0.2,0.9))
 
 #----
-pdf("plot_phen.pdf", height = 12, width = 10)
+pdf("Fig2_phen.pdf", height = 12, width = 10)
 plot_grid(plot.phen, plot.phen.gdd, nrow=1, rel_widths=c(1,1.5) )
 dev.off()
 
@@ -248,18 +252,17 @@ inds=which(dat$total>0)
 dat$DI[inds]= (dat$in1[inds] +dat$in2[inds]*2 +dat$in3[inds]*3 +dat$in4[inds]*4 +dat$in5[inds]*5 +dat$in6[inds]*6)/dat$total[inds]
 
 #ANALYSIS
-specs= c("Aeropedellus clavatus", "Camnula pellucida", "Melanoplus dawsoni", "Melanoplus sanguinipes", "Melanoplus boulderensis")
-
-#reduce to focal species
-dat= dat[dat$species %in% specs[2:5],]
+# specs= c("Aeropedellus clavatus", "Camnula pellucida", "Melanoplus dawsoni", "Melanoplus sanguinipes", "Melanoplus boulderensis")
+# #reduce to focal species
+dat= dat[dat$species %in% specs[3:6],]
 
 #code period
 dat$per=1
 dat$per[dat$year>2000]=2
 
-#code early and late species
-dat$early_late=2
-dat$early_late[dat$species %in% specs[c(2,4)]]=1
+# #code early and late species
+# dat$early_late=2
+# dat$early_late[dat$species %in% specs[c(2,4)]]=1
 
 #add elevation
 dat$elev= as.factor(elevs[match(dat$site, sites)])
@@ -292,19 +295,21 @@ dat$period= factor(dat$period, levels=c("resurvey", "initial") )
 #elevation
 dat$elev= factor(dat$elev, levels=c(3048,2591,2195,1752) )
 #species
-dat$species= factor(dat$species, levels=c("Melanoplus boulderensis", "Camnula pellucida", "Melanoplus sanguinipes", "Melanoplus dawsoni") )
+dat$species= factor(dat$species, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Chloealtis abdominalis", "Camnula pellucida", "Melanoplus sanguinipes", "Melanoplus dawsoni") )
 
 #--------------------
 #DEVELOPMENTAL INDEX
 #Plot DI by ordinal date
 di.plot= ggplot(data=dat, aes(x=ordinal, y = DI, color=Cdd_siteave, group=siteyear, linetype=period))+facet_grid(elev~species) +
-  theme_bw()+geom_smooth(se=FALSE, aes(alpha=0.5), span=2)+
-  scale_colour_gradientn(colours =matlab.like(10))+ylab("development index")+xlab("day of year")+labs(color="season cdds")
+  theme_bw()+
+  geom_point()+geom_line(aes(alpha=0.5))+ #+geom_smooth(se=FALSE, aes(alpha=0.5), span=2)+
+  scale_colour_gradientn(colours =matlab.like(10))+ylab("development index")+xlab("day of year")+labs(color="mean season gdds")
 
 #Plot DI by GDD
 di.plot.gdd= ggplot(data=dat, aes(x=cdd_sum, y = DI, color=Cdd_siteave, group=siteyear, linetype=period))+facet_grid(elev~species) +
-  theme_bw()+geom_smooth(se=FALSE, aes(alpha=0.5),span=2)+
-  scale_colour_gradientn(colours =matlab.like(10))+ylab("development index")+xlab("cummulative growing degree days")+labs(color="season cdds")+
+  theme_bw()+
+  geom_point()+geom_line(aes(alpha=0.5))+ #+geom_smooth(se=FALSE, aes(alpha=0.5),span=2)+
+  scale_colour_gradientn(colours =matlab.like(10))+ylab("development index")+xlab("cummulative growing degree days")+labs(color="mean season gdds")+
   xlim(0,1100)
 
 #----
@@ -333,7 +338,7 @@ dat.datebin = dat %>% group_by(species,site,year,date.bin) %>% summarise_each(fu
 #----------------
 
 #Calculate percent composition
-dat.t= dat.datebin
+dat.t= dat  #dat.datebin
 
 dat.t= dat.t %>% mutate(in6.per= in6/total,in5.per= in5/total,in4.per= in4/total,in3.per= in3/total,in2.per= in2/total,in1.per= in1/total) 
 #cumulative percentage
@@ -345,44 +350,102 @@ dat.t= dat.t %>% mutate(in6.cper= in6.per+in5.per+in4.per+in3.per+in2.per+in1.pe
                         in1.cper= in1.per)
 
 #-------
-dat.t1<- dat.t
-dat.t3<- dat.t1
+dat.t3<- dat.t
 
 #PLOT
 #dat.t3= subset(dat.t1, dat.t1$site %in% c("A1","C1"))
-dat.t3= subset(dat.t3, dat.t3$species %in% c("Melanoplus dawsoni")) #,"Camnula pellucida", "Melanoplus boulderensis"
-dat.t3= subset(dat.t3, dat.t3$year %in% c(2009, 2007))
+dat.t3= subset(dat.t3, dat.t3$year %in% c(2010, 2007))
 
-#dat.t3$GDDs_binned= gdds[dat.t3$gdd.bin]
-dat.t3$GDDs_binned= dates[dat.t3$date.bin]
+#make warm and cold labels
+dat.t3$tempyear<- "2010 cool"
+dat.t3$tempyear[which(dat.t3$year==2007)]<-"2007 warm"
+dat.t3$tempyear= factor(dat.t3$tempyear, levels=c("2010 cool","2007 warm"))
 
-dat.t3$per= factor(dat.t3$per, levels=c("initial","cold","med","warm") )
+# #dat.t3$GDDs_binned= gdds[dat.t3$gdd.bin]
+# dat.t3$GDDs_binned= dates[dat.t3$date.bin]
+# 
+# dat.t3$per= factor(dat.t3$per, levels=c("initial","cold","med","warm") )
+
 dat.t3$species= factor(dat.t3$species, levels=c("Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes","Melanoplus dawsoni"))
 
 #elevation factor
 dat.t3$elevation= factor(dat.t3$elevation, levels=c(3048,2591,2195,1752) )
+dat.t3$Cdd_siteave= factor(round(dat.t3$Cdd_siteave,2))
 
-g1= ggplot(data=dat.t3) + geom_line(aes(x=ordinal, y = in5.cper, color="4th and 5th")) + 
+#restrict columns to remove NAs
+dat.t3= dat.t3[,c("ordinal","species","elevation","Cdd_siteave","year","tempyear","in6.cper","in5.cper","in4.cper","in3.cper","in2.cper","in1.cper","cdd_sum")]
+
+#SUBSET SPECIES
+#dat.t3= subset(dat.t3, dat.t3$species %in% c("Melanoplus boulderensis")) #,"Camnula pellucida", "Melanoplus boulderensis", "Melanoplus dawsoni"
+
+comp.md= ggplot(data=dat.t3[which(dat.t3$species=="Melanoplus dawsoni"),]) + geom_line(aes(x=ordinal, y = in5.cper, color="4th and 5th")) + 
   geom_line(aes(x=ordinal, y = in3.cper, color="3rd")) +
   geom_line(aes(x=ordinal, y = in2.cper, color="1st and 2nd"))+
-  facet_grid(elevation~year)+xlim(135,225)+
+  facet_grid(elevation~tempyear)+xlim(135,220)+
   geom_ribbon(aes(x = ordinal, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + 
   geom_ribbon(aes(x = ordinal, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + 
   geom_ribbon(aes(x = ordinal, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ 
   geom_ribbon(aes(x = ordinal, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+
   ylab("proportion composition")+xlab("day of year")+
   theme(legend.position="bottom", text = element_text(size=14))+labs(color="Instar" )+  
-  guides(colour = guide_legend(override.aes = list(size=3)))
+  guides(colour = guide_legend(override.aes = list(size=3)))+
+  geom_vline(xintercept = 152, color="gray")+geom_vline(xintercept = 213, color="gray")
 #+scale_color_manual(values=c("red","green","purple"),labels=c("1st and 2nd","3rd","4th and 5th") )
+
+comp.mb= ggplot(data=dat.t3[which(dat.t3$species=="Melanoplus boulderensis"),]) + geom_line(aes(x=ordinal, y = in5.cper, color="4th and 5th")) + 
+  geom_line(aes(x=ordinal, y = in3.cper, color="3rd")) +
+  geom_line(aes(x=ordinal, y = in2.cper, color="1st and 2nd"))+
+  facet_grid(elevation~tempyear)+xlim(135,220)+
+  geom_ribbon(aes(x = ordinal, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + 
+  geom_ribbon(aes(x = ordinal, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + 
+  geom_ribbon(aes(x = ordinal, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ 
+  geom_ribbon(aes(x = ordinal, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+
+  ylab("proportion composition")+xlab("day of year")+
+  theme(legend.position="bottom", text = element_text(size=14))+labs(color="Instar" )+  
+  guides(colour = guide_legend(override.aes = list(size=3)))+
+  geom_vline(xintercept = 152, color="gray")+geom_vline(xintercept = 213, color="gray")
 
 ## FIGURE SX. Composition
 #PLOT
-pdf("CompositionPlot.pdf",height = 12, width = 12)
-plot(g1)
+pdf("Fig4_composition.pdf",height = 8, width = 12)
+plot_grid(comp.mb, comp.md, nrow=1, rel_widths=c(1,1),labels = c('A) M. boulderensis','B) M. dawsoni'))
 dev.off()
 
 #-------------------------
+#COMPOSITION GDD VERSION
 
+comp.md.gdd= ggplot(data=dat.t3[which(dat.t3$species=="Melanoplus dawsoni"),]) + geom_line(aes(x=cdd_sum, y = in5.cper, color="4th and 5th")) + 
+  geom_line(aes(x=cdd_sum, y = in3.cper, color="3rd")) +
+  geom_line(aes(x=cdd_sum, y = in2.cper, color="1st and 2nd"))+
+  facet_grid(elevation~tempyear)+xlim(0,900)+
+  geom_ribbon(aes(x = cdd_sum, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + 
+  geom_ribbon(aes(x = cdd_sum, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + 
+  geom_ribbon(aes(x = cdd_sum, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ 
+  geom_ribbon(aes(x = cdd_sum, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+
+  ylab("proportion composition")+xlab("cummulative growing degree days (C)")+
+  theme(legend.position="bottom", text = element_text(size=14))+labs(color="Instar" )+  
+  guides(colour = guide_legend(override.aes = list(size=3)))+
+  geom_vline(xintercept = 0, color="gray")+geom_vline(xintercept = 800, color="gray")
+#+scale_color_manual(values=c("red","green","purple"),labels=c("1st and 2nd","3rd","4th and 5th") )
+
+comp.mb.gdd= ggplot(data=dat.t3[which(dat.t3$species=="Melanoplus boulderensis"),]) + geom_line(aes(x=cdd_sum, y = in5.cper, color="4th and 5th")) + 
+  geom_line(aes(x=cdd_sum, y = in3.cper, color="3rd")) +
+  geom_line(aes(x=cdd_sum, y = in2.cper, color="1st and 2nd"))+
+  facet_grid(elevation~tempyear)+xlim(0,900)+
+  geom_ribbon(aes(x = cdd_sum, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + 
+  geom_ribbon(aes(x = cdd_sum, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + 
+  geom_ribbon(aes(x = cdd_sum, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ 
+  geom_ribbon(aes(x = cdd_sum, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+
+  ylab("proportion composition")+xlab("cummulative growing degree days (C)")+
+  theme(legend.position="bottom", text = element_text(size=14))+labs(color="Instar" )+  
+  guides(colour = guide_legend(override.aes = list(size=3)))+
+  geom_vline(xintercept = 0, color="gray")+geom_vline(xintercept = 800, color="gray")
+
+## FIGURE SX. Composition
+#PLOT
+pdf("Fig4_composition_gdd.pdf",height = 8, width = 12)
+plot_grid(comp.mb.gdd, comp.md.gdd, nrow=1, rel_widths=c(1,1),labels = c('A) M. boulderensis','B) M. dawsoni'))
+dev.off()
 
 
 
