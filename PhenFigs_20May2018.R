@@ -320,43 +320,94 @@ dev.off()
 #--------------
 #Plot adult phen est by DI
 
-library(ggpmisc)
-library(broom)
-
-ggplot(data=dat, aes(x=ordinal, y = DI, color=Cdd_siteave, group=siteyear, linetype=period))+facet_grid(elev~species) +
-  theme_bw()+
-  geom_point()+geom_line(aes(alpha=0.5))+ #+geom_smooth(se=FALSE, aes(alpha=0.5), span=2)+
-  scale_colour_gradientn(colours =matlab.like(10))+ylab("development index")+xlab("day of year")+labs(color="mean season gdds")+
-  geom_smooth(method="lm", formula=y~x+x^2) +
-  stat_poly_eq(parse=T, aes(label = ..eq.label..), formula=y~x+x^2)
-
-dout <- dat %>%
-  group_by(siteyear, species) %>%
-  do(tidy(lm(DI~ordinal +ordinal^2, data = .)))
-dout 
-
-#-----
-#make squared term
-didat= subset(dat, species="Melanoplus boulderensis")
-didat= didat[,c(1:2,11:ncol(didat)) ]
-didat$ordsq= (didat$ordinal)^2
-
-dout <- didat %>%
-  group_by(siteyear,species) %>%
-  do(tidy(lm(DI~ordinal +ordsq, data = .)))
-dout 
-
-didat2<- didat[1:10,]
-didat2$ordinal<- 151:160
-didat2$ordsq<- (didat2$ordinal)^2
-
-augment(dout, newdata=didat2)
-
-
-x=1:10
-plot(x, -21.5+0.243*x-0.000532*x^2)
-
+## failed using broom
+#library(broom)
 #broom::augment(x=fm1, newdata = Data, type.predict = "response")
+
+#Brute force calculation
+
+dat$spsiteyear= paste(dat$siteyear, dat$species, sep="")
+combs= unique(dat$spsiteyear)
+
+#days to predict over
+doys= 150:250
+gdds= seq(0,1000,10)
+
+#make matrix to store output
+dout= data.frame(spsiteyear=combs, doy_adult= rep(NA, length(combs)),gdd_adult= rep(NA, length(combs)) ) 
+  
+for(k in 1:length(combs)){
+dats= subset(dat, dat$spsiteyear==combs[k])
+
+if(nrow(dats)>5) { 
+  #doy
+  spl<- smooth.spline(x=dats$ordinal, y=dats$DI)
+  pred.spl<- predict(spl, doys)
+  #extract point where almost all adults DI>5.8
+  dout[k,2]= doys[which.max(pred.spl$y>5.8)]
+
+  #gdd
+  spl<- smooth.spline(x=dats$cdd_sumfall, y=dats$DI)
+  pred.spl<- predict(spl, gdds)
+  #extract point where almost all adults DI>5.8
+  dout[k,3]= gdds[which.max(pred.spl$y>5.8)]
+  
+  } #end check length
+
+} #end combs
+
+#add estimate back to df
+dat$doy_adult= dout[match(dat$spsiteyear, dout$spsiteyear),"doy_adult"]
+dat$gdd_adult= dout[match(dat$spsiteyear, dout$spsiteyear),"gdd_adult"]
+
+#plot
+
+#---
+#calculate significant regressions
+#apply through combinations of species and elevations
+dat$elevspec= paste(dat$elev, dat$species, sep="")
+elevspec= matrix(unique(dat$elevspec))
+
+#extract p-values
+p.doy= apply(elevspec,1, FUN=function(x) summary(lm(dat$doy_adult[which(dat$elev==substr(x,1,4)&dat$species==substr(x,5,nchar(x)))] ~ dat$cdd_seas[which(dat$elev==substr(x,1,4)&dat$species==substr(x,5,nchar(x)) )]) )$coefficients[2,4])
+p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(dat$gdd_adult[which(dat$elev==substr(x,1,4)&dat$species==substr(x,5,nchar(x)))] ~ dat$cdd_seas[which(dat$elev==substr(x,1,4)&dat$species==substr(x,5,nchar(x)) )]) )$coefficients[2,4])
+#combine
+p.mat=as.data.frame(cbind(elevspec,p.doy,p.gdd))
+#add columns for significance
+p.mat$sig.doy<-"ns"
+p.mat$sig.doy[which(p.doy<0.05)]="significant"
+p.mat$sig.gdd="ns"
+p.mat$sig.gdd[which(p.gdd<0.05)]="significant"
+
+#add back to matrix
+match1= match(dat$elevspec, elevspec)
+dat$sig.doy= factor(p.mat[match1,"sig.doy"], levels=c("significant","ns"))
+dat$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","ns"))
+#---
+
+#DOY
+plot.phen.doye=ggplot(data=dat, aes(x=cdd_seas, y = doy_adult, color=species))+
+  geom_point(aes(shape=period, fill=species, alpha=period, stroke=1), size=3)+
+  geom_point(aes(shape=period, fill=NULL, stroke=1), size=3)+
+  geom_smooth(method="lm",se=F, aes(linetype=sig.doy))+
+  facet_wrap(~elev, ncol=1, scales="free") +
+  theme_bw()+ylab("day of year")+xlab("season growing degree days (C)")+
+  scale_shape_manual(values = c(21, 22, 23))+
+  scale_alpha_manual(values = c(0.2,0.9))+theme(legend.position="none")
+
+#GDD
+plot.phen.gdde=ggplot(data=dat, aes(x=cdd_seas, y = gdd_adult, color=species))+
+  geom_point(aes(shape=period, fill=species, alpha=period, stroke=1), size=3)+
+  geom_point(aes(shape=period, fill=NULL, stroke=1), size=3)+
+  geom_smooth(method="lm",se=F, aes(linetype=sig.doy))+
+  facet_wrap(~elev, ncol=1, scales="free") +
+  theme_bw()+ylab("cummulative growing degree days")+xlab("season growing degree days (C)")+
+  scale_shape_manual(values = c(21, 22, 23))+
+  scale_alpha_manual(values = c(0.2,0.9))
+
+pdf("Fig2_phen_est.pdf", height = 12, width = 10)
+plot_grid(plot.phen.doye, plot.phen.gdde, nrow=1, rel_widths=c(1,1.5) )
+dev.off()
 
 #=================================
 #COMPOSITION PLOT
