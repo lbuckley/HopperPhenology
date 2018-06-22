@@ -26,19 +26,7 @@ mod1= lme(ordinal~elevation*species*period,random=~1|year , data=hop.ave)
 mod2= lme(cdd_sum~elevation*species*period,random=~1|year , data=hop.ave)
 
 #----------------
-#Fig 2. Phenology
-
-hop4q= subset(hop4, hop4$quantile==50)
-hop4q.2= hop4q[,c("site","year","elevation","period","cdd_seas","cdd_sum","ordinal","species") ]
-hop4q.2= na.omit(hop4q.2)
-
-#ordinal
-mod1= lm(ordinal~cdd_seas*species*elevation*period , data=hop4q.2)
-#gdd
-mod2= lm(cdd_sum~cdd_seas*species*elevation*period, data=hop4q.2)
-
-#----------------
-#Fig 3. DI
+#Fig 2. DI
 
 di.dat= dat[,c("DI","site","year","elev","period","cdd_seas","cdd_sumfall","ordinal","species","Cdd_siteave") ]
 di.dat= na.omit(di.dat)
@@ -69,6 +57,36 @@ di.dat2= subset(di.dat, di.dat$species=="Melanoplus boulderensis")
 mod1= lme(DI~ordinal*elev*period*cdd_seas, random=~1|spsiyr, data=di.dat2)
 #gdd
 mod2= lme(DI~cdd_sumfall*elev*period*cdd_seas, random=~1|spsiyr, data=di.dat2)
+
+#----------------
+#Fig 3. Adult Phenology
+
+#aggregate to sp site year
+dat.ave=dat
+dat.ave$year= as.numeric(as.character(dat.ave$year))
+
+dat.ave= aggregate(dat.ave, list(dat$spsiteyear, dat$species, dat$site, dat$period),FUN=mean, na.rm=TRUE)
+dat.ave$species= dat.ave$Group.2
+dat.ave$site= dat.ave$Group.3
+dat.ave$period= dat.ave$Group.4
+
+dat.s= dat.ave[,c("site","year","elevation","period","cdd_seas","doy_adult","gdd_adult","species") ]
+dat.s= na.omit(dat.s)
+
+#ordinal
+mod1= lm(doy_adult~cdd_seas*species*elevation*period , data=dat.s)
+#gdd
+mod2= lm(gdd_adult~cdd_seas*species*elevation*period, data=dat.s)
+
+
+di.plot= ggplot(data=dat, aes(x=ordinal, y = DI, color=Cdd_siteave, group=siteyear, linetype=period))+facet_grid(elev.lab~species) +
+  theme_bw()+
+  geom_point()+geom_line(aes(alpha=0.5))+ #+geom_smooth(se=FALSE, aes(alpha=0.5), span=2)+
+  scale_colour_gradientn(colours =matlab.like(10))+ylab("development index")+xlab("day of year")+labs(color="mean season gdds")+
+  theme(legend.position = "bottom") + guides(alpha=FALSE)
+
+
+
 
 #----------------
 #Fig 4. Composition plot
