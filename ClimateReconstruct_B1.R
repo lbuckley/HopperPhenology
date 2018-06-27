@@ -8,8 +8,9 @@ library(reshape)
 #Reconstruct A1 data for 2009, 2010
 
 #--------------------------------------
-fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
+#fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
 #fdir= "C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
+fdir= "/Volumes/GoogleDrive/My\ Drive/AlexanderResurvey/DataForAnalysis/"
 
 #load climate data
 setwd( paste(fdir, "climate", sep="") )   

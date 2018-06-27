@@ -16,19 +16,18 @@ mod1= lme(Cdd_seas~elevation*period,random=~1|Year , data=clim2)
 #---
 #Phenology~elevation
 
-hop.ave= hop4[which(hop4$quantile==50),]
-hop.ave$elevation= as.numeric(as.character(hop.ave$elevation))
-hop.ave= as.data.frame( hop.ave[,c("elevation", "cdd_sum","site","year","ordinal","cdd_seas","species","period")] )
+dat1= as.data.frame( dat[,c("doy_adult", "gdd_adult", "elevation","species","period","site","year")] )
+dat1= na.omit(dat1)
 
 #ordinal
-mod1= lme(ordinal~elevation*species*period,random=~1|year , data=hop.ave)
+mod1= lme(doy_adult~elevation*species,random=~1|year , data=dat1)
 #gdd
-mod2= lme(cdd_sum~elevation*species*period,random=~1|year , data=hop.ave)
+mod2= lme(gdd_adult~elevation*species,random=~1|year , data=dat1)
 
 #----------------
 #Fig 2. DI
 
-di.dat= dat[,c("DI","site","year","elev","period","cdd_seas","cdd_sumfall","ordinal","species","Cdd_siteave") ]
+di.dat= dat[,c("doy_adult", "gdd_adult","DI","site","year","elev","period","cdd_seas","cdd_sumfall","ordinal","species","Cdd_siteave") ]
 di.dat= na.omit(di.dat)
 
 #make random var
@@ -36,6 +35,7 @@ di.dat$spsiyr= paste(di.dat$species, di.dat$site, di.dat$year, sep="")
   
 #ordinal
 mod1= lme(DI~ordinal*species*period*cdd_seas*elev, random=~1|spsiyr, data=di.dat)
+mod1= lme(DI~ordinal*species*cdd_seas*elev, random=~1|spsiyr, data=di.dat)
 mod1= lme(DI~ordinal*species*period*Cdd_siteave, random=~1|spsiyr, data=di.dat)
 #gdd
 mod2= lme(DI~cdd_sumfall*species*period*cdd_seas*elev, random=~1|spsiyr, data=di.dat)
@@ -52,11 +52,22 @@ mod2= lme(DI~cdd_sumfall*species*period*cdd_seas, random=~1|spsiyr, data=di.dat2
 
 #divide by species
 di.dat2= subset(di.dat, di.dat$species=="Melanoplus boulderensis")
+#make elevation continuous
+di.dat2$elev= as.numeric(as.character(di.dat2$elev))
 
 #ordinal
-mod1= lme(DI~ordinal*elev*period*cdd_seas, random=~1|spsiyr, data=di.dat2)
+mod1= lme(DI~ordinal*period*cdd_seas*elev, random=~1|spsiyr, data=di.dat2)
+mod1= lme(DI~ordinal*cdd_seas*elev, random=~1|spsiyr, data=di.dat2)
 #gdd
-mod2= lme(DI~cdd_sumfall*elev*period*cdd_seas, random=~1|spsiyr, data=di.dat2)
+mod2= lme(DI~cdd_sumfall*period*cdd_seas*elev, random=~1|spsiyr, data=di.dat2)
+
+#divide by elevation and species
+di.dat2= subset(di.dat, di.dat$species=="Melanoplus boulderensis" & di.dat$site=="C1")
+
+#ordinal
+mod1= lme(DI~ordinal*period*cdd_seas, random=~1|spsiyr, data=di.dat2)
+#gdd
+mod2= lme(DI~cdd_sumfall*period*cdd_seas, random=~1|spsiyr, data=di.dat2)
 
 #----------------
 #Fig 3. Adult Phenology
@@ -78,15 +89,16 @@ mod1= lm(doy_adult~cdd_seas*species*elevation*period , data=dat.s)
 #gdd
 mod2= lm(gdd_adult~cdd_seas*species*elevation*period, data=dat.s)
 
+#---
+#divide by species
+dat.ss= subset(dat.s, dat.s$species=="Melanoplus boulderensis")
 
-di.plot= ggplot(data=dat, aes(x=ordinal, y = DI, color=Cdd_siteave, group=siteyear, linetype=period))+facet_grid(elev.lab~species) +
-  theme_bw()+
-  geom_point()+geom_line(aes(alpha=0.5))+ #+geom_smooth(se=FALSE, aes(alpha=0.5), span=2)+
-  scale_colour_gradientn(colours =matlab.like(10))+ylab("development index")+xlab("day of year")+labs(color="mean season gdds")+
-  theme(legend.position = "bottom") + guides(alpha=FALSE)
-
-
-
+#ordinal
+mod1= lm(doy_adult~cdd_seas*elevation*period , data=dat.ss)
+mod1= lm(doy_adult~cdd_seas*elevation, data=dat.ss)
+#gdd
+mod2= lm(gdd_adult~cdd_seas*elevation*period, data=dat.ss)
+mod2= lm(gdd_adult~cdd_seas*elevation, data=dat.ss)
 
 #----------------
 #Fig 4. Composition plot
