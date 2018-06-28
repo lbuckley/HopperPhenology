@@ -2,6 +2,7 @@
 
 require(nlme)
 require(lme4)
+require(MuMIn)
 
 #--------------
 #STATS
@@ -50,16 +51,25 @@ mod1= lme(DI~ordinal*species*period*cdd_seas, random=~1|spsiyr, data=di.dat2)
 #gdd
 mod2= lme(DI~cdd_sumfall*species*period*cdd_seas, random=~1|spsiyr, data=di.dat2)
 
+#----
 #divide by species
-di.dat2= subset(di.dat, di.dat$species=="Melanoplus boulderensis")
+di.dat2= subset(di.dat, di.dat$species==specs[6] )
 #make elevation continuous
 di.dat2$elev= as.numeric(as.character(di.dat2$elev))
 
+#dropped period from models
 #ordinal
-mod1= lme(DI~ordinal*period*cdd_seas*elev, random=~1|spsiyr, data=di.dat2)
-mod1= lme(DI~ordinal*cdd_seas*elev, random=~1|spsiyr, data=di.dat2)
+#mod1= lme(DI~ordinal+cdd_seas+elev+ordinal:cdd_seas+ordinal:elev+cdd_seas:elev, random=~1|spsiyr, data=di.dat2)
+#mod1= lme(DI~ordinal*cdd_seas*elev, random=~1|spsiyr, data=di.dat2)
+mod1= lme(DI~ordinal+ordinal:cdd_seas+ordinal:elev+ordinal:cdd_seas:elev, random=~1|spsiyr, data=di.dat2)
+di.dat2$species[1]
+#summary(mod1)
+anova(mod1, type="marginal")
+
 #gdd
 mod2= lme(DI~cdd_sumfall*period*cdd_seas*elev, random=~1|spsiyr, data=di.dat2)
+summary(mod2)
+#----
 
 #divide by elevation and species
 di.dat2= subset(di.dat, di.dat$species=="Melanoplus boulderensis" & di.dat$site=="C1")
