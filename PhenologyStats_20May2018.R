@@ -51,7 +51,8 @@ mod1= lme(DI~ordinal*species*period*cdd_seas, random=~1|spsiyr, data=di.dat2)
 #gdd
 mod2= lme(DI~cdd_sumfall*species*period*cdd_seas, random=~1|spsiyr, data=di.dat2)
 
-#----
+#--------
+## STATS FOR PAPER
 #divide by species
 di.dat2= subset(di.dat, di.dat$species==specs[6] )
 #make elevation continuous
@@ -61,16 +62,31 @@ di.dat2$elev= as.numeric(as.character(di.dat2$elev))
 #ordinal
 #mod1= lme(DI~ordinal+cdd_seas+elev+ordinal:cdd_seas+ordinal:elev+cdd_seas:elev, random=~1|spsiyr, data=di.dat2)
 #mod1= lme(DI~ordinal*cdd_seas*elev, random=~1|spsiyr, data=di.dat2)
-mod1= lme(DI~ordinal+ordinal:cdd_seas+ordinal:elev+ordinal:cdd_seas:elev, random=~1|spsiyr, data=di.dat2)
+mod1= lme(DI~poly(ordinal, order=2)+ poly(ordinal, order=2):cdd_seas+poly(ordinal, order=2):elev+poly(ordinal, order=2):cdd_seas:elev, random=~1|spsiyr, data=di.dat2)
+
+di.dat2$species[1]
+anova(mod1, type="marginal")
+#ms[,c("denDF","F-value","p-value")]
+summary(mod1)
+
+#visualize
+di.plot= ggplot(data=di.dat2, aes(x=ordinal, y = DI, color=Cdd_siteave, group=spsiyr, linetype=factor(elev) ))+
+  geom_smooth(method=loess, se=FALSE)+
+  scale_colour_gradientn(colours =matlab.like(10))
+
+#---
+#gdd
+#divide by species
+di.dat2= subset(di.dat, di.dat$species==specs[5] )
+#make elevation continuous
+di.dat2$elev= as.numeric(as.character(di.dat2$elev))
+mod2= lme(DI~poly(cdd_sumfall, order=3)+ poly(cdd_sumfall, order=3):cdd_seas+poly(cdd_sumfall, order=3):elev+poly(cdd_sumfall, order=3):cdd_seas:elev, random=~1|spsiyr, data=di.dat2)
+
 di.dat2$species[1]
 #summary(mod1)
-anova(mod1, type="marginal")
+anova(mod2, type="marginal")
 
-#gdd
-mod2= lme(DI~cdd_sumfall*period*cdd_seas*elev, random=~1|spsiyr, data=di.dat2)
-summary(mod2)
 #----
-
 #divide by elevation and species
 di.dat2= subset(di.dat, di.dat$species=="Melanoplus boulderensis" & di.dat$site=="C1")
 
@@ -101,14 +117,18 @@ mod2= lm(gdd_adult~cdd_seas*species*elevation*period, data=dat.s)
 
 #---
 #divide by species
-dat.ss= subset(dat.s, dat.s$species=="Melanoplus boulderensis")
+dat.ss= subset(dat.s, dat.s$species==specs[5])
 
 #ordinal
 mod1= lm(doy_adult~cdd_seas*elevation*period , data=dat.ss)
 mod1= lm(doy_adult~cdd_seas*elevation, data=dat.ss)
+mod1= lm(doy_adult~cdd_seas*site, data=dat.ss)
 #gdd
 mod2= lm(gdd_adult~cdd_seas*elevation*period, data=dat.ss)
 mod2= lm(gdd_adult~cdd_seas*elevation, data=dat.ss)
+
+dat.ss$species[1]
+summary(mod1)
 
 #----------------
 #Fig 4. Composition plot
