@@ -34,40 +34,21 @@ di.dat= na.omit(di.dat)
 #make random var
 di.dat$spsiyr= paste(di.dat$species, di.dat$site, di.dat$year, sep="")
   
-#ordinal
-mod1= lme(DI~ordinal*species*period*cdd_seas*elev, random=~1|spsiyr, data=di.dat)
-mod1= lme(DI~ordinal*species*cdd_seas*elev, random=~1|spsiyr, data=di.dat)
-mod1= lme(DI~ordinal*species*period*Cdd_siteave, random=~1|spsiyr, data=di.dat)
-#gdd
-mod2= lme(DI~cdd_sumfall*species*period*cdd_seas*elev, random=~1|spsiyr, data=di.dat)
-mod2= lme(DI~cdd_sumfall*species*period*Cdd_siteave, random=~1|spsiyr, data=di.dat)
-#FIX ******
-
-#divide by elev
-di.dat2= subset(di.dat, di.dat$site=="C1")
-
-#ordinal
-mod1= lme(DI~ordinal*species*period*cdd_seas, random=~1|spsiyr, data=di.dat2)
-#gdd
-mod2= lme(DI~cdd_sumfall*species*period*cdd_seas, random=~1|spsiyr, data=di.dat2)
-
-#--------
 ## STATS FOR PAPER
 #divide by species
 di.dat2= subset(di.dat, di.dat$species==specs[6] )
 #make elevation continuous
 di.dat2$elev= as.numeric(as.character(di.dat2$elev))
 
-#dropped period from models
 #ordinal
-#mod1= lme(DI~ordinal+cdd_seas+elev+ordinal:cdd_seas+ordinal:elev+cdd_seas:elev, random=~1|spsiyr, data=di.dat2)
-#mod1= lme(DI~ordinal*cdd_seas*elev, random=~1|spsiyr, data=di.dat2)
-mod1= lme(DI~poly(ordinal, order=2)+ poly(ordinal, order=2):cdd_seas+poly(ordinal, order=2):elev+poly(ordinal, order=2):cdd_seas:elev, random=~1|spsiyr, data=di.dat2)
+#mod1= lme(DI~poly(ordinal, order=3)+ poly(ordinal, order=3):cdd_seas+poly(ordinal, order=3):elev+poly(ordinal, order=3):cdd_seas:elev, random=~1|spsiyr, data=di.dat2)
+#with main effect of period
+mod1= lme(DI~poly(ordinal, order=3)+ poly(ordinal, order=3):period +poly(ordinal, order=3):cdd_seas+poly(ordinal, order=3):elev+poly(ordinal, order=3):cdd_seas:elev, random=~1|spsiyr, data=di.dat2)
 
 di.dat2$species[1]
 anova(mod1, type="marginal")
 #ms[,c("denDF","F-value","p-value")]
-summary(mod1)
+#summary(mod1)
 
 #visualize
 di.plot= ggplot(data=di.dat2, aes(x=ordinal, y = DI, color=Cdd_siteave, group=spsiyr, linetype=factor(elev) ))+
@@ -77,23 +58,14 @@ di.plot= ggplot(data=di.dat2, aes(x=ordinal, y = DI, color=Cdd_siteave, group=sp
 #---
 #gdd
 #divide by species
-di.dat2= subset(di.dat, di.dat$species==specs[5] )
+di.dat2= subset(di.dat, di.dat$species==specs[6] )
 #make elevation continuous
 di.dat2$elev= as.numeric(as.character(di.dat2$elev))
-mod2= lme(DI~poly(cdd_sumfall, order=3)+ poly(cdd_sumfall, order=3):cdd_seas+poly(cdd_sumfall, order=3):elev+poly(cdd_sumfall, order=3):cdd_seas:elev, random=~1|spsiyr, data=di.dat2)
+mod2= lme(DI~poly(cdd_sumfall, order=3)+ poly(cdd_sumfall, order=3):period + poly(cdd_sumfall, order=3):cdd_seas+poly(cdd_sumfall, order=3):elev+poly(cdd_sumfall, order=3):cdd_seas:elev, random=~1|spsiyr, data=di.dat2)
 
 di.dat2$species[1]
 #summary(mod1)
 anova(mod2, type="marginal")
-
-#----
-#divide by elevation and species
-di.dat2= subset(di.dat, di.dat$species=="Melanoplus boulderensis" & di.dat$site=="C1")
-
-#ordinal
-mod1= lme(DI~ordinal*period*cdd_seas, random=~1|spsiyr, data=di.dat2)
-#gdd
-mod2= lme(DI~cdd_sumfall*period*cdd_seas, random=~1|spsiyr, data=di.dat2)
 
 #----------------
 #Fig 3. Adult Phenology
