@@ -19,11 +19,13 @@ mod1= lme(Cdd_seas~elevation*period,random=~1|Year , data=clim2)
 
 dat1= as.data.frame( dat[,c("doy_adult", "gdd_adult", "elevation","species","period","site","year")] )
 dat1= na.omit(dat1)
+#abbreviate species names
+dat1$spec= substr(dat1$species, 11,14)
 
 #ordinal
 mod1= lme(doy_adult~elevation*species,random=~1|year , data=dat1)
 #gdd
-mod2= lme(gdd_adult~elevation*species,random=~1|year , data=dat1)
+mod2= lme(gdd_adult~elevation*spec,random=~1|year , data=dat1)
 
 #----------------
 #Fig 2. DI
@@ -36,7 +38,7 @@ di.dat$spsiyr= paste(di.dat$species, di.dat$site, di.dat$year, sep="")
   
 ## STATS FOR PAPER
 #divide by species
-di.dat2= subset(di.dat, di.dat$species==specs[6] )
+di.dat2= subset(di.dat, di.dat$species==specs[5] )
 #make elevation continuous
 di.dat2$elev= as.numeric(as.character(di.dat2$elev))
 
@@ -58,7 +60,7 @@ di.plot= ggplot(data=di.dat2, aes(x=ordinal, y = DI, color=Cdd_siteave, group=sp
 #---
 #gdd
 #divide by species
-di.dat2= subset(di.dat, di.dat$species==specs[6] )
+di.dat2= subset(di.dat, di.dat$species==specs[1] )
 #make elevation continuous
 di.dat2$elev= as.numeric(as.character(di.dat2$elev))
 mod2= lme(DI~poly(cdd_sumfall, order=3)+ poly(cdd_sumfall, order=3):period + poly(cdd_sumfall, order=3):cdd_seas+poly(cdd_sumfall, order=3):elev+poly(cdd_sumfall, order=3):cdd_seas:elev, random=~1|spsiyr, data=di.dat2)
@@ -70,37 +72,32 @@ anova(mod2, type="marginal")
 #----------------
 #Fig 3. Adult Phenology
 
-#aggregate to sp site year
-dat.ave=dat
-dat.ave$year= as.numeric(as.character(dat.ave$year))
-
-dat.ave= aggregate(dat.ave, list(dat$spsiteyear, dat$species, dat$site, dat$period),FUN=mean, na.rm=TRUE)
-dat.ave$species= dat.ave$Group.2
-dat.ave$site= dat.ave$Group.3
-dat.ave$period= dat.ave$Group.4
-
-dat.s= dat.ave[,c("site","year","elevation","period","cdd_seas","doy_adult","gdd_adult","species") ]
-dat.s= na.omit(dat.s)
+dat.s= na.omit(dat.ssy)
+dat.s$spec= substr(dat.s$species, 11,16)
+dat.s$elev= as.factor(dat.s$elev)
 
 #ordinal
-mod1= lm(doy_adult~cdd_seas*species*elevation*period , data=dat.s)
+mod1= lm(doy_adult~ (cdd_seas+spec+elevation+period)^2, data=dat.s)
 #gdd
-mod2= lm(gdd_adult~cdd_seas*species*elevation*period, data=dat.s)
+mod2= lm(gdd_adult~ (cdd_seas+spec+elevation+period)^2, data=dat.s)
+
+anova(mod1)
+anova(mod2)
 
 #---
 #divide by species
-dat.ss= subset(dat.s, dat.s$species==specs[5])
+dat.ss= subset(dat.s, dat.s$species==specs[2])
 
 #ordinal
-mod1= lm(doy_adult~cdd_seas*elevation*period , data=dat.ss)
-mod1= lm(doy_adult~cdd_seas*elevation, data=dat.ss)
-mod1= lm(doy_adult~cdd_seas*site, data=dat.ss)
+mod1= lm(doy_adult~period+cdd_seas+elevation+cdd_seas:elevation, data=dat.ss)
 #gdd
-mod2= lm(gdd_adult~cdd_seas*elevation*period, data=dat.ss)
-mod2= lm(gdd_adult~cdd_seas*elevation, data=dat.ss)
+mod2= lm(gdd_adult~period+cdd_seas+elevation+cdd_seas:elevation, data=dat.ss)
 
 dat.ss$species[1]
+anova(mod1)
+anova(mod2)
 summary(mod1)
+summary(mod2)
 
 #----------------
 #Fig 4. Composition plot

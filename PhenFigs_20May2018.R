@@ -345,31 +345,36 @@ dev.off()
 # PLOT ADULT PHENOLOGY
 # estimated by DI
 
+#aggregate to spsiteyear
+dat.ssy= dat[,c("elev","species","cdd_seas","doy_adult","gdd_adult","spsiteyear","elev.lab","elevation","period")  ]
+dups= duplicated(dat.ssy$spsiteyear)
+dat.ssy=dat.ssy[which(dups==FALSE),]
+
 #PLOT
 #calculate significant regressions
 #apply through combinations of species and elevations
-dat$elevspec= paste(dat$elev, dat$species, sep="")
-elevspec= matrix(unique(dat$elevspec))
+dat.ssy$elevspec= paste(dat.ssy$elev, dat.ssy$species, sep="")
+elevspec= matrix(unique(dat.ssy$elevspec))
 
 #extract p-values
-p.doy= apply(elevspec,1, FUN=function(x) summary(lm(dat$doy_adult[which(dat$elev==substr(x,1,4)&dat$species==substr(x,5,nchar(x)))] ~ dat$cdd_seas[which(dat$elev==substr(x,1,4)&dat$species==substr(x,5,nchar(x)) )]) )$coefficients[2,4])
-p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(dat$gdd_adult[which(dat$elev==substr(x,1,4)&dat$species==substr(x,5,nchar(x)))] ~ dat$cdd_seas[which(dat$elev==substr(x,1,4)&dat$species==substr(x,5,nchar(x)) )]) )$coefficients[2,4])
+p.doy= apply(elevspec,1, FUN=function(x) summary(lm(dat.ssy$doy_adult[which(dat.ssy$elev==substr(x,1,4)&dat.ssy$species==substr(x,5,nchar(x)))] ~ dat.ssy$cdd_seas[which(dat.ssy$elev==substr(x,1,4)&dat.ssy$species==substr(x,5,nchar(x)) )]) )$coefficients[2,4])
+p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(dat.ssy$gdd_adult[which(dat.ssy$elev==substr(x,1,4)&dat.ssy$species==substr(x,5,nchar(x)))] ~ dat.ssy$cdd_seas[which(dat.ssy$elev==substr(x,1,4)&dat.ssy$species==substr(x,5,nchar(x)) )]) )$coefficients[2,4])
 #combine
 p.mat=as.data.frame(cbind(elevspec,p.doy,p.gdd))
 #add columns for significance
-p.mat$sig.doy<-"ns"
+p.mat$sig.doy<-"nonsignificant"
 p.mat$sig.doy[which(p.doy<0.05)]="significant"
-p.mat$sig.gdd="ns"
+p.mat$sig.gdd="nonsignificant"
 p.mat$sig.gdd[which(p.gdd<0.05)]="significant"
 
 #add back to matrix
-match1= match(dat$elevspec, elevspec)
-dat$sig.doy= factor(p.mat[match1,"sig.doy"], levels=c("significant","ns"))
-dat$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","ns"))
+match1= match(dat.ssy$elevspec, elevspec)
+dat.ssy$sig.doy= factor(p.mat[match1,"sig.doy"], levels=c("significant","nonsignificant"))
+dat.ssy$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","nonsignificant"))
 #---
 
 #DOY
-plot.phen.doye=ggplot(data=dat, aes(x=cdd_seas, y = doy_adult, color=species))+
+plot.phen.doye=ggplot(data=dat.ssy, aes(x=cdd_seas, y = doy_adult, color=species))+
   geom_point(aes(shape=period, fill=species, alpha=period, stroke=1), size=3)+
   geom_point(aes(shape=period, fill=NULL, stroke=1), size=3)+
   geom_smooth(method="lm",se=F, aes(linetype=sig.doy))+
@@ -379,10 +384,10 @@ plot.phen.doye=ggplot(data=dat, aes(x=cdd_seas, y = doy_adult, color=species))+
   scale_alpha_manual(values = c(0.2,0.9))+theme(legend.position="none")
 
 #GDD
-plot.phen.gdde=ggplot(data=dat, aes(x=cdd_seas, y = gdd_adult, color=species))+
+plot.phen.gdde=ggplot(data=dat.ssy, aes(x=cdd_seas, y = gdd_adult, color=species))+
   geom_point(aes(shape=period, fill=species, alpha=period, stroke=1), size=3)+
   geom_point(aes(shape=period, fill=NULL, stroke=1), size=3)+
-  geom_smooth(method="lm",se=F, aes(linetype=sig.doy))+
+  geom_smooth(method="lm",se=F, aes(linetype=sig.gdd))+
   facet_wrap(~elev.lab, ncol=1, scales="free") +
   theme_bw()+ylab("cummulative growing degree days")+xlab("season growing degree days (C)")+
   labs(linetype="significance")+
