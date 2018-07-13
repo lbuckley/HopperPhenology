@@ -86,7 +86,7 @@ anova(mod2)
 
 #---
 #divide by species
-dat.ss= subset(dat.s, dat.s$species==specs[2])
+dat.ss= subset(dat.s, dat.s$species==specs[3])
 
 #ordinal
 mod1= lm(doy_adult~period+cdd_seas+elevation+cdd_seas:elevation, data=dat.ss)
@@ -94,6 +94,24 @@ mod1= lm(doy_adult~period+cdd_seas+elevation+cdd_seas:elevation, data=dat.ss)
 mod2= lm(gdd_adult~period+cdd_seas+elevation+cdd_seas:elevation, data=dat.ss)
 
 dat.ss$species[1]
+anova(mod1)
+anova(mod2)
+summary(mod1)
+summary(mod2)
+
+#---
+#divide by elev
+dat.ss= subset(dat.s, dat.s$elev==elevs[3])
+
+#ordinal
+#mod1= lm(doy_adult~period+cdd_seas+spec+cdd_seas:spec, data=dat.ss)
+mod1= lm(doy_adult~cdd_seas+spec+cdd_seas:spec, data=dat.ss)
+
+#gdd
+#mod2= lm(gdd_adult~period+cdd_seas+spec+cdd_seas:spec, data=dat.ss)
+mod2= lm(gdd_adult~cdd_seas+spec+cdd_seas:spec, data=dat.ss)
+
+dat.ss$elev[1]
 anova(mod1)
 anova(mod2)
 summary(mod1)

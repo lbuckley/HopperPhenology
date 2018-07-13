@@ -356,6 +356,20 @@ dat.ssy=dat.ssy[which(dups==FALSE),]
 dat.ssy$elevspec= paste(dat.ssy$elev, dat.ssy$species, sep="")
 elevspec= matrix(unique(dat.ssy$elevspec))
 
+#---
+#EXTRACT COEFFS
+p.doy= apply(elevspec,1, FUN=function(x) summary(lm(dat.ssy$doy_adult[which(dat.ssy$elev==substr(x,1,4)&dat.ssy$species==substr(x,5,nchar(x)))] ~ dat.ssy$cdd_seas[which(dat.ssy$elev==substr(x,1,4)&dat.ssy$species==substr(x,5,nchar(x)) )]) )$coefficients[2,])
+p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(dat.ssy$gdd_adult[which(dat.ssy$elev==substr(x,1,4)&dat.ssy$species==substr(x,5,nchar(x)))] ~ dat.ssy$cdd_seas[which(dat.ssy$elev==substr(x,1,4)&dat.ssy$species==substr(x,5,nchar(x)) )]) )$coefficients[2,])
+#combine
+p.mat=as.data.frame(cbind(elevspec,t(p.doy),t(p.gdd) ))
+#make numeric
+p.mat$Estimate= as.numeric(as.character(p.mat$Estimate))
+p.mat$`Std. Error`= as.numeric(as.character(p.mat$`Std. Error`))
+#CIs
+p.mat$upCI= p.mat$Estimate + 1.96*p.mat$`Std. Error`
+p.mat$lowCI= p.mat$Estimate - 1.96*p.mat$`Std. Error`
+#---
+
 #extract p-values
 p.doy= apply(elevspec,1, FUN=function(x) summary(lm(dat.ssy$doy_adult[which(dat.ssy$elev==substr(x,1,4)&dat.ssy$species==substr(x,5,nchar(x)))] ~ dat.ssy$cdd_seas[which(dat.ssy$elev==substr(x,1,4)&dat.ssy$species==substr(x,5,nchar(x)) )]) )$coefficients[2,4])
 p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(dat.ssy$gdd_adult[which(dat.ssy$elev==substr(x,1,4)&dat.ssy$species==substr(x,5,nchar(x)))] ~ dat.ssy$cdd_seas[which(dat.ssy$elev==substr(x,1,4)&dat.ssy$species==substr(x,5,nchar(x)) )]) )$coefficients[2,4])
