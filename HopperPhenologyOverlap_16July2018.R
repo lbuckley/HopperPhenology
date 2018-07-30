@@ -4,7 +4,7 @@ library(tidyr)
 
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/figures/")
 
-#data currently from phenology file
+#data currently from phenology file PhenFigs_20May2018.R
 #------------------------------------
 
 #focal species
@@ -42,6 +42,11 @@ dat$swarm= as.factor(round(dat$Cdd_siteave,2))
 
 #adults
 pdf("Fig_dist.pdf",height = 12, width = 10)
+ggplot(data=dat, aes(x=ordinal, y = in6, group=species, color=species))+
+  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(swarm~site, scales="free")
+dev.off()
+
+pdf("Fig_distyear.pdf",height = 12, width = 10)
 ggplot(data=dat, aes(x=ordinal, y = in6, group=species, color=species))+
   geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(year~site, scales="free")
 dev.off()
@@ -105,7 +110,7 @@ for(year in 1:length(years)){
         #DI overlap
        
         #check each species has at least 4 dates
-        if(  length(which(dat.sub2$species==sp1))>3 & length(which(dat.sub2$species==sp2))>3 ){
+        if( length(which(dat.sub2$species==sp1))>3 & length(which(dat.sub2$species==sp2))>3 ){
         
         #loess curve for each species
         d.sp1= dat.sub2[which(dat.sub2$species==sp1),]
@@ -130,6 +135,7 @@ for(year in 1:length(years)){
         #normalize to 1
         sp1.n= f1(low:up)/a1
         sp2.n= f2(low:up)/a2
+        #### FIX
         #pianka's index
         po[inds[ind.k], year, site,1]= sum(sp1.n*sp2.n)/sqrt(sum(sp1.n^2)*sum(sp2.n^2))
         
@@ -169,10 +175,11 @@ po1$siteyear= paste(po1$site, po1$year, sep="")
 #select cdd metric
 #clim1$Cdd=  clim1$Cdd_sum
 #clim1$Cdd=  clim1$Cdd_june
-clim1$Cdd=  clim1$Cdd_july
+#clim1$Cdd=  clim1$Cdd_july
 #clim1$Cdd=  clim1$Cdd_aug
 #clim1$Cdd=  clim1$Cdd_early
 #clim1$Cdd=  clim1$Cdd_mid
+clim1$Cdd= clim1$Cdd_seas
 
 po1$Tmean=NA
 po1$cdd=NA
@@ -215,15 +222,14 @@ po1$sp2= factor(po1$sp2, levels=c("Aeropedellus clavatus","Melanoplus boulderens
 
 #plot
 pdf("PhenOverlap_byYear.pdf", height = 10, width = 10)
-ggplot(data=po1[which(po1$metric==2),], aes(x=year, y = value, color=site ))+geom_point() +facet_grid(sp1~sp2, drop=TRUE)+theme_bw() +
-geom_line#+geom_smooth(method=lm) #geom_line
+ggplot(data=po1[which(po1$metric==2),], aes(x=year, y = value, color=site ))+geom_point() +facet_grid(sp1~sp2, drop=TRUE)+theme_bw() +geom_smooth(method=lm, se=FALSE) #geom_line
 dev.off() 
 
 #--------
 #plot by temp and gdd
 
 #focus on sites B1 and C1 for now
-po2= po1[which(po1$metric==1),] #[which(po1$site %in% c("B1", "C1")) ,]
+po2= po1[which(po1$metric==2),] #[which(po1$site %in% c("B1", "C1")) ,]
 
 #plot
 
