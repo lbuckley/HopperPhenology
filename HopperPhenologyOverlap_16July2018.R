@@ -6,12 +6,17 @@ setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/figures/"
 
 #data currently from phenology file PhenFigs_20May2018.R
 #------------------------------------
+dat.all= dat
 
 #focal species
-specs= c("Aeropedellus clavatus","Chloealtis abdominalis","Camnula pellucida","Melanoplus dawsoni","Melanoplus boulderensis","Melanoplus sanguinipes")
+specs= c("Aeropedellus clavatus","Camnula pellucida","Melanoplus dawsoni","Melanoplus boulderensis","Melanoplus sanguinipes") #"Chloealtis abdominalis",
 
 years= unique(na.omit(hop$year))
 sites= unique(hop$site)
+
+#elevs and sites
+sites=c("CHA", "A1", "B1", "C1", "D1")
+elevs= c(1752, 2195, 2591, 3048, 3739)
 
 #subset ot focal species
 dat= subset(dat, dat$species %in% specs)
@@ -21,11 +26,34 @@ dat$DIp=0
 inds=which(dat$total>0)  
 dat$DIp[inds]= (dat$in1[inds] +dat$in2[inds]*2 +dat$in3[inds]*3 +dat$in4[inds]*4 +dat$in5[inds]*5 +dat$in6[inds]*6)/6
 
+#calculate proportion
+dat.sum= ddply(dat, c("site", "year","species","spsiteyear"), summarise,
+               DIp = sum(DIp, na.rm=TRUE), TotMean=mean(total, na.rm=TRUE), TotSum=sum(total, na.rm=TRUE), AdultSum=sum(in6, na.rm=TRUE), Ndates=length(total[DIp>0]) )
+dat.sum= dat.sum[order(dat.sum$site,dat.sum$species, dat.sum$year),]
+
+dat$DIptotal=NA
+dat$Ndates= NA
+dat$TotSum= NA
+dat$AdultSum= NA
+match1= match(dat$spsiteyear, dat.sum$spsiteyear)
+matched= which(!is.na(match1))
+dat$DIptotal[matched]<- dat.sum$DIp[match1[matched]]  
+dat$Ndates[matched]<- dat.sum$Ndates[match1[matched]]
+dat$TotSum[matched]<- dat.sum$TotSum[match1[matched]]
+dat$AdultSum[matched]<- dat.sum$AdultSum[match1[matched]]
+#normalize
+dat$DIpNorm= dat$DIp/dat$DIptotal
+dat$AdultNorm= dat$in6/dat$AdultSum
+
+#drop cases with TotSum<30 or Ndates<5
+dat= dat[which(dat$Ndates>5),]
+dat= dat[which(dat$TotSum>30),]
+
 #all species combinations
 sp.combs= combn(specs, 2)
 
 #set up data storage
-po= array(data = 0, dim = c(length(sp.combs[1,]), length(years), length(sites),3) ) #add dimension for multiple metrics
+po= array(data = 0, dim = c(length(sp.combs[1,]), length(years), length(sites),5) ) #add dimension for multiple metrics
 
 #combine species combinations names
 sp.combs.n= paste(sp.combs[1,],sp.combs[2,],sep="_")
@@ -62,6 +90,41 @@ ggplot(data=dat, aes(x=ordinal, y = DIp, group=species, color=species))+
   geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(year~site, scales="free")
 dev.off()
 
+#----
+#plot as proportion of total
+
+pdf("Fig_dipnorm.pdf",height = 12, width = 10)
+ggplot(data=dat, aes(x=ordinal, y = DIpNorm, group=species, color=species))+
+  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(swarm~site, scales="free")+ylim(0,0.2)
+dev.off()
+
+pdf("Fig_dipnormyear.pdf",height = 12, width = 10)
+ggplot(data=dat, aes(x=ordinal, y = DIpNorm, group=species, color=species))+
+  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(year~site, scales="free")+ylim(0,0.2)
+dev.off()
+
+pdf("Fig_distnorm.pdf",height = 12, width = 10)
+ggplot(data=dat, aes(x=ordinal, y = AdultNorm, group=species, color=species))+
+  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(swarm~site, scales="free")+ylim(0,0.2)
+dev.off()
+
+pdf("Fig_distnormyear.pdf",height = 12, width = 10)
+ggplot(data=dat, aes(x=ordinal, y = AdultNorm, group=species, color=species))+
+  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(year~site, scales="free")+ylim(0,0.2)
+dev.off()
+
+#---
+#by species
+pdf("Fig_distnormyear_byspec.pdf",height = 12, width = 10)
+ggplot(data=dat, aes(x=ordinal, y = AdultNorm, group=spsiteyear, color=Cdd_siteave))+
+  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(species~site, scales="free")+ylim(0,0.2)
+dev.off()
+
+pdf("Fig_distyear_byspec.pdf",height = 12, width = 10)
+ggplot(data=dat, aes(x=ordinal, y = in6, group=spsiteyear, color=Cdd_siteave))+
+  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(species~site, scales="free")
+dev.off()
+
 #----------------------------
 for(year in 1:length(years)){
   for(site in 1:length(sites)){
@@ -71,6 +134,9 @@ for(year in 1:length(years)){
     dat.sub= dat.sub[ which(dat.sub$site==sites[site]),]
     #restrict to adults
     #dat.sub= subset(dat.sub, dat.sub$in6>0 )
+    
+    #change to GDD
+    #dat.sub$ordinal= dat.sub$cdd_sumfall
     
     if( nrow(dat.sub)>0 ){ #check data exists
       
@@ -119,6 +185,7 @@ for(year in 1:length(years)){
         # create loess object and prediction function
         l1 <- loess(DIp~ordinal, d.sp1)
         l2 <- loess(DIp~ordinal, d.sp2)
+        
         #set negative values and NA to zero
         f1 <- function(x) {f=predict(l1,newdata=x); f[f<0]=0;f[is.na(f)]=0; return(f)}
         f2 <- function(x) {f=predict(l2,newdata=x); f[f<0]=0;f[is.na(f)]=0; return(f)}
@@ -126,7 +193,7 @@ for(year in 1:length(years)){
         #find range
         low= min(dat.sub2$ordinal)
         up= max(dat.sub2$ordinal)
-        
+       
         # perform integration
         a1=integrate(f1,low,up)$value
         a2=integrate(f2,low,up)$value
@@ -135,7 +202,6 @@ for(year in 1:length(years)){
         #normalize to 1
         sp1.n= f1(low:up)/a1
         sp2.n= f2(low:up)/a2
-        #### FIX
         #pianka's index
         po[inds[ind.k], year, site,1]= sum(sp1.n*sp2.n)/sqrt(sum(sp1.n^2)*sum(sp2.n^2))
         
@@ -144,10 +210,16 @@ for(year in 1:length(years)){
         sp1.n= f1(low:up)
         sp2.n= f2(low:up)
         dinds= which(sp1.n>0 & sp2.n>0)
-        po[inds[ind.k], year, site,2]= sum(sapply(dinds, FUN=function(x) min(sp1.n[x],sp2.n[x])) )/(a1+a2)
-        #direction of overlap
-        po[inds[ind.k], year, site,3]= sum(sapply(dinds, FUN=function(x) sp1.n[x]-sp2.n[x]))
-
+        if(length(dinds>0)) po[inds[ind.k], year, site,2]= sum(sapply(dinds, FUN=function(x) min(sp1.n[x],sp2.n[x])) )/(a1+a2)
+        
+        #time difference metrics
+        #days overlap
+        po[inds[ind.k], year, site,3]= length(dinds)
+        #days difference in peak
+        po[inds[ind.k], year, site,4]= abs(which.max(sp1.n)-which.max(sp2.n))
+        #days difference in 20% of peak
+        po[inds[ind.k], year, site,5]= abs(which.max(sp1.n>max(sp1.n)*0.2) - which.max(sp2.n>max(sp2.n)*0.2) )
+        
         } #end check each species has at least 4 dates
       } #end loop species combinations
       
@@ -193,7 +265,7 @@ datm= dat[duplicated(dat$siteyear)==FALSE,]
 match1= match(po1$siteyear, datm$siteyear)
 matched= which(!is.na(match1))
 po1$Tmean[matched]<- datm$Tmean[match1[matched]]  
-po1$cdd[matched]<- datm$cdd_seas[match1[matched]]
+po1$cdd[matched]<- datm$cdd_seas[match1[matched]] 
 
 #---
 #Change years for plotting ### FIX
@@ -222,28 +294,80 @@ po1$sp2= factor(po1$sp2, levels=c("Aeropedellus clavatus","Melanoplus boulderens
 
 #plot
 pdf("PhenOverlap_byYear.pdf", height = 10, width = 10)
-ggplot(data=po1[which(po1$metric==2),], aes(x=year, y = value, color=site ))+geom_point() +facet_grid(sp1~sp2, drop=TRUE)+theme_bw() +geom_smooth(method=lm, se=FALSE) #geom_line
+ggplot(data=po1[which(po1$metric==1),], aes(x=year, y = value, color=site, shape=period))+geom_point() +facet_grid(sp1~sp2, drop=TRUE)+theme_bw() +geom_smooth(method=lm, se=FALSE) #geom_line
 dev.off() 
 
 #--------
 #plot by temp and gdd
 
+#add elevation
+po1$elevation= as.factor(elevs[match(po1$site, sites)])
+
+#drop Chataqua for now 
+#po1= po1[which(po1$site!="CHA"),]
+
 #focus on sites B1 and C1 for now
-po2= po1[which(po1$metric==2),] #[which(po1$site %in% c("B1", "C1")) ,]
+po1= po1[which(po1$site %in% c("B1", "C1")) ,] #[which(po1$metric==2),] #
 
 #plot
 
 #overlap by temp
 pdf("PhenOverlap_byTemp.pdf", height = 10, width = 10)
-ggplot(data=po2, aes(x=Tmean, y = value, color=site, shape=period))+geom_point()+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()#+geom_smooth(method=lm, se=FALSE)
+ggplot(data=po1[which(po1$metric==1),], aes(x=Tmean, y = value, color=site, shape=period))+geom_point()+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()#+geom_smooth(method=lm, se=FALSE)
 dev.off()
 
-#add elevation
-po2$elevation= as.factor(elevs[match(po2$site, sites)])
-
+#*********************************************
 #overlap by GDD
+
+#assess significance
+#calculate significant regressions
+#apply through combinations of species and elevations
+po1$elevspec= paste(po1$elevation, po1$sp, sep="")
+elevspec= matrix(unique(po1$elevspec))
+
+#---
+#EXTRACT COEFFS
+p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(po1$value[which(po1$metric==1 & po1$elevation==substr(x,1,4)& po1$sp==substr(x,5,nchar(x)))] ~ po1$cdd[which(po1$metric==1 & po1$elevation==substr(x,1,4)&po1$sp==substr(x,5,nchar(x)) )]) )$coefficients[2,])
+#combine
+p.mat=as.data.frame(cbind(elevspec,t(p.gdd) ))
+#make numeric
+p.mat$Estimate= as.numeric(as.character(p.mat$Estimate))
+p.mat$`Std. Error`= as.numeric(as.character(p.mat$`Std. Error`))
+#CIs
+p.mat$upCI= p.mat$Estimate + 1.96*p.mat$`Std. Error`
+p.mat$lowCI= p.mat$Estimate - 1.96*p.mat$`Std. Error`
+#---
+
+#extract p-values
+p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(po1$value[which(po1$metric==1 & po1$elevation==substr(x,1,4)& po1$sp==substr(x,5,nchar(x)))] ~ po1$cdd[which(po1$metric==1 & po1$elevation==substr(x,1,4)&po1$sp==substr(x,5,nchar(x)) )]) )$coefficients[2,4])
+#combine
+p.mat=as.data.frame(cbind(elevspec,p.gdd))
+#add columns for significance
+p.mat$sig.gdd<-"nonsignificant"
+p.mat$sig.gdd[which(p.gdd<0.05)]="significant"
+
+#add back to matrix
+match1= match(po1$elevspec, elevspec)
+po1$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","nonsignificant"))
+#---
+
 pdf("PhenOverlap_byGDD.pdf", height = 8, width = 10)
-ggplot(data=po2, aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=3)+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE)+ylab("Phenological overlap")+xlab("Growing degree days")+ scale_color_manual(values=c("darkorange", "blue","darkgreen","purple"))
+ggplot(data=po1[which(po1$metric==1),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
+  facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE, aes(linetype=sig.gdd))+ylab("Phenological overlap")+xlab("Growing degree days")+ 
+  scale_color_manual(values=c("darkorange", "blue","darkgreen","purple"))#+xlim(200,750)
+dev.off()
+#**********************************************
+
+#overlap by GDD by site
+pdf("PhenOverlap_byGDD_site.pdf", height = 8, width = 10)
+ggplot(data=po1[which(po1$metric==1),], aes(x=cdd, y = value, color=sp))+geom_point(aes(shape=period, fill=period), size=2)+
+  facet_wrap(~site, drop=TRUE, scales="free")+theme_bw()+geom_smooth(method="lm", se=FALSE)+ylab("Phenological overlap")+xlab("Growing degree days")+ 
+  scale_color_manual(values=rainbow(10))+ylim(0,1)
+dev.off()
+
+#just B1 and C1
+pdf("PhenOverlap_byGDD_bysite.pdf", height = 8, width = 10)
+ggplot(data=po1[which(po1$metric==1 & po1$site %in% c("A1","B1")),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE)+ylab("Phenological overlap")+xlab("Growing degree days")+ scale_color_manual(values=c("darkorange", "blue","darkgreen","purple"))
 dev.off()
 
 #===================================
