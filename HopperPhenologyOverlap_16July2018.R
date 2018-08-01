@@ -15,8 +15,8 @@ years= unique(na.omit(hop$year))
 sites= unique(hop$site)
 
 #elevs and sites
-sites=c("CHA", "A1", "B1", "C1", "D1")
-elevs= c(1752, 2195, 2591, 3048, 3739)
+sites=c("CHA", "A1", "B1", "C1")
+elevs= c(1752, 2195, 2591, 3048)
 
 #subset ot focal species
 dat= subset(dat, dat$species %in% specs)
@@ -51,9 +51,11 @@ dat= dat[which(dat$TotSum>30),]
 
 #all species combinations
 sp.combs= combn(specs, 2)
+#switch focal species
+sp.combs= cbind(sp.combs, sp.combs[c(2,1),])
 
 #set up data storage
-po= array(data = 0, dim = c(length(sp.combs[1,]), length(years), length(sites),5) ) #add dimension for multiple metrics
+po= array(data = 0, dim = c(length(sp.combs[1,]), length(years), length(sites),8) ) #add dimension for multiple metrics
 
 #combine species combinations names
 sp.combs.n= paste(sp.combs[1,],sp.combs[2,],sep="_")
@@ -211,14 +213,21 @@ for(year in 1:length(years)){
         sp2.n= f2(low:up)
         dinds= which(sp1.n>0 & sp2.n>0)
         if(length(dinds>0)) po[inds[ind.k], year, site,2]= sum(sapply(dinds, FUN=function(x) min(sp1.n[x],sp2.n[x])) )/(a1+a2)
+        #overlapping area normalized to total area of focal species
+        if(length(dinds>0)) po[inds[ind.k], year, site,3]= sum(sapply(dinds, FUN=function(x) min(sp1.n[x],sp2.n[x])) )/(a1)
+        #not normalized
+        if(length(dinds>0)) po[inds[ind.k], year, site,4]= sum(sapply(dinds, FUN=function(x) min(sp1.n[x],sp2.n[x])) )
+        
+        #area of focal species
+        po[inds[ind.k], year, site,5]= a1
         
         #time difference metrics
         #days overlap
-        po[inds[ind.k], year, site,3]= length(dinds)
+        po[inds[ind.k], year, site,6]= length(dinds)
         #days difference in peak
-        po[inds[ind.k], year, site,4]= abs(which.max(sp1.n)-which.max(sp2.n))
+        po[inds[ind.k], year, site,7]= abs(which.max(sp1.n)-which.max(sp2.n))
         #days difference in 20% of peak
-        po[inds[ind.k], year, site,5]= abs(which.max(sp1.n>max(sp1.n)*0.2) - which.max(sp2.n>max(sp2.n)*0.2) )
+        po[inds[ind.k], year, site,8]= abs(which.max(sp1.n>max(sp1.n)*0.2) - which.max(sp2.n>max(sp2.n)*0.2) )
         
         } #end check each species has at least 4 dates
       } #end loop species combinations
@@ -235,6 +244,9 @@ po[po==0]=NA
 # PO: sp comb x years x sites
 
 po1= melt(po, varnames=c("sp","year","site","metric"))
+
+#drop NAs
+po1= po1[which(!is.na(po1$value)),]
 
 #add time period
 po1$period="initial"
@@ -255,17 +267,19 @@ clim1$Cdd= clim1$Cdd_seas
 
 po1$Tmean=NA
 po1$cdd=NA
+po1$cdd_july=NA
 match1= match(po1$siteyear, clim1$siteyear)
 matched= which(!is.na(match1))
 po1$Tmean[matched]<- clim1$Mean[match1[matched]]  
 po1$cdd[matched]<- clim1$Cdd[match1[matched]]
+po1$cdd_july[matched]<- clim1$Cdd_july[match1[matched]]
 
-##match back to dat
-datm= dat[duplicated(dat$siteyear)==FALSE,]
-match1= match(po1$siteyear, datm$siteyear)
-matched= which(!is.na(match1))
-po1$Tmean[matched]<- datm$Tmean[match1[matched]]  
-po1$cdd[matched]<- datm$cdd_seas[match1[matched]] 
+# ##match back to dat
+# datm= dat[duplicated(dat$siteyear)==FALSE,]
+# match1= match(po1$siteyear, datm$siteyear)
+# matched= which(!is.na(match1))
+# po1$Tmean[matched]<- datm$Tmean[match1[matched]]  
+# po1$cdd[matched]<- datm$cdd_seas[match1[matched]] 
 
 #---
 #Change years for plotting ### FIX
@@ -294,7 +308,7 @@ po1$sp2= factor(po1$sp2, levels=c("Aeropedellus clavatus","Melanoplus boulderens
 
 #plot
 pdf("PhenOverlap_byYear.pdf", height = 10, width = 10)
-ggplot(data=po1[which(po1$metric==1),], aes(x=year, y = value, color=site, shape=period))+geom_point() +facet_grid(sp1~sp2, drop=TRUE)+theme_bw() +geom_smooth(method=lm, se=FALSE) #geom_line
+ggplot(data=po1[which(po1$metric==3),], aes(x=year, y = value, color=site, shape=period))+geom_point() +facet_grid(sp1~sp2, drop=TRUE)+theme_bw() +geom_smooth(method=lm, se=FALSE) #geom_line
 dev.off() 
 
 #--------
@@ -307,13 +321,14 @@ po1$elevation= as.factor(elevs[match(po1$site, sites)])
 #po1= po1[which(po1$site!="CHA"),]
 
 #focus on sites B1 and C1 for now
-po1= po1[which(po1$site %in% c("B1", "C1")) ,] #[which(po1$metric==2),] #
+#po1= po1[which(po1$site %in% c("B1", "C1")) ,] #[which(po1$metric==2),] #
 
 #plot
 
 #overlap by temp
 pdf("PhenOverlap_byTemp.pdf", height = 10, width = 10)
-ggplot(data=po1[which(po1$metric==1),], aes(x=Tmean, y = value, color=site, shape=period))+geom_point()+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()#+geom_smooth(method=lm, se=FALSE)
+ggplot(data=po1[which(po1$metric==3),], aes(x=Tmean, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
+  facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE)
 dev.off()
 
 #*********************************************
@@ -327,7 +342,10 @@ elevspec= matrix(unique(po1$elevspec))
 
 #---
 #EXTRACT COEFFS
-p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(po1$value[which(po1$metric==1 & po1$elevation==substr(x,1,4)& po1$sp==substr(x,5,nchar(x)))] ~ po1$cdd[which(po1$metric==1 & po1$elevation==substr(x,1,4)&po1$sp==substr(x,5,nchar(x)) )]) )$coefficients[2,])
+po2= po1[which(po1$metric==6),]
+
+p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(value~cdd_july, data=po2[which(po2$elevation==substr(x,1,4)& po2$sp==substr(x,5,nchar(x)) ),] ))$coefficients[2,])
+
 #combine
 p.mat=as.data.frame(cbind(elevspec,t(p.gdd) ))
 #make numeric
@@ -339,7 +357,7 @@ p.mat$lowCI= p.mat$Estimate - 1.96*p.mat$`Std. Error`
 #---
 
 #extract p-values
-p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(po1$value[which(po1$metric==1 & po1$elevation==substr(x,1,4)& po1$sp==substr(x,5,nchar(x)))] ~ po1$cdd[which(po1$metric==1 & po1$elevation==substr(x,1,4)&po1$sp==substr(x,5,nchar(x)) )]) )$coefficients[2,4])
+p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(value~cdd_july, data=po2[which(po2$elevation==substr(x,1,4)& po2$sp==substr(x,5,nchar(x)) ),] ))$coefficients[2,4])
 #combine
 p.mat=as.data.frame(cbind(elevspec,p.gdd))
 #add columns for significance
@@ -347,15 +365,16 @@ p.mat$sig.gdd<-"nonsignificant"
 p.mat$sig.gdd[which(p.gdd<0.05)]="significant"
 
 #add back to matrix
-match1= match(po1$elevspec, elevspec)
-po1$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","nonsignificant"))
+match1= match(po2$elevspec, elevspec)
+po2$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","nonsignificant"))
 #---
 
-pdf("PhenOverlap_byGDD.pdf", height = 8, width = 10)
-ggplot(data=po1[which(po1$metric==1),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
+#pdf("PhenOverlap_byGDD.pdf", height = 8, width = 10)
+ggplot(data=po2, aes(x=cdd_july, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
   facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE, aes(linetype=sig.gdd))+ylab("Phenological overlap")+xlab("Growing degree days")+ 
   scale_color_manual(values=c("darkorange", "blue","darkgreen","purple"))#+xlim(200,750)
-dev.off()
+#dev.off()
+
 #**********************************************
 
 #overlap by GDD by site
@@ -372,12 +391,14 @@ dev.off()
 
 #===================================
 # STATS GROUP BY SPECIES
+po2= po1[which(po1$metric==4),] 
+
 mod1= lm(value~ cdd*elevation+sp2+sp1, data=po2)
-mod1= lm(value~ cdd*elevation+sp, data=po2)
+mod1= lm(value~ cdd*as.numeric(as.character(elevation))+sp, data=po2)
 
 #by focal species
-sp.k=6
-po3= subset(po2, po2$sp1==specs[sp.k] | po2$sp2==specs[sp.k])
+sp.k=5
+po3= subset(po2, po2$sp1==specs[sp.k] ) #subset(po2, po2$sp1==specs[sp.k] | po2$sp2==specs[sp.k])
 #switch species order
 p.temp= po3$sp1
 inds= which(po3$sp2==specs[sp.k])
@@ -387,52 +408,10 @@ if(length(inds)>0){
 }
 
 po3$elevation= as.numeric(as.character(po3$elevation))
-mod1= lm(value~ cdd*elevation+sp2, data=po3)
+mod1= lm(value~ cdd_july+cdd_july:elevation+cdd_july:sp2, data=po3)
+specs[sp.k]
 summary(mod1)
 
 #--------------------------------
-#significant trends by species
-#Code from Stuart
 
-finalDat=po2
-
-# Create results storage
-modelOutput <- array(NA, dim = c(length(unique(finalDat$sp)), 4, length(sites)))
-colnames(modelOutput) <- c("slope", "SE", "tvalue", "pvalue")
-
-coms= unique(finalDat$sp)
-
-for(site in 1:length(sites)){
-  for(com in 1:length(unique(finalDat$sp))){
-    
-    # Subset to 1 site and 1 species combination
-    dat <- finalDat[finalDat$site == sites[site] & finalDat$sp == coms[com],]
-    
-    # Remove year 2009 for B1
-    if(sites[site] == "B1"){
-      dat <- dat[dat$year != 2009,]
-    }
-    
-    # Only try to create model if data exists
-    if(sum(!is.na(dat$value)) > 0){
-      # Create linear model
-      mod <- lm(value ~ cdd, data = dat)
-      
-      # Extract coefficients table
-      modelOutput[com,,site] <- summary(mod)[["coefficients"]][2,]
-    }
-  }
-}
-
-# Combine all output in a data frame
-combIDs <- finalDat[match(sort(unique(finalDat$sp)), finalDat$sp), c("sp", "sp1", "sp2")]
-coefs <- rbind(modelOutput[,,1], modelOutput[,,2], modelOutput[,,3], modelOutput[,,4])
-IDs <- rbind(combIDs, combIDs, combIDs, combIDs)
-modelResults <- cbind(IDs, coefs)
-modelResults$site <- rep(sites, each = 15)
-
-# View marginally significant results
-View(modelResults[!is.na(modelResults$pvalue) & modelResults$pvalue < 0.1,])
-
-#----
 
