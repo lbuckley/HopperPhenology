@@ -135,6 +135,7 @@ clim1$period= factor(clim1$period, levels=c("resurvey", "initial") )
 clim.ave= subset(clim1, clim1$Site %in% c("B1","C1"))
 clim.ave= aggregate(clim.ave, list(clim.ave$Year),FUN=mean )
 clim1$Cdd_siteave= clim.ave$Cdd_seas[match(clim1$Year, clim.ave$Year)]
+clim1$Cdd_july_siteave= clim.ave$Cdd_july[match(clim1$Year, clim.ave$Year)]
 
 #------------------------------------------------
 #CALCULATE DEVELOMENT INDEX
@@ -185,6 +186,9 @@ dat$cdd_seas[matched]<- clim1$Cdd_seas[match1[matched]]
 
 dat$Cdd_siteave<-NA
 dat$Cdd_siteave[matched]<- clim1$Cdd_siteave[match1[matched]]  
+
+dat$Cdd_july_siteave<-NA
+dat$Cdd_july_siteave[matched]<- clim1$Cdd_july_siteave[match1[matched]]  
 
 #clean up
 dat$year= as.factor(dat$year)

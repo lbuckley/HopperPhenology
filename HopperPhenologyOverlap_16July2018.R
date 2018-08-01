@@ -68,63 +68,33 @@ dimnames(po)[[3]] <- sites
 #----
 # plot out densities
 #made season warmth a factor
-dat$swarm= as.factor(round(dat$Cdd_siteave,2))
+#make cdd_july index
+#dat$swarm= as.factor(round(dat$Cdd_siteave,2))
+dat$swarm= as.factor(round(dat$Cdd_july_siteave,2))
 
-#adults
-pdf("Fig_dist.pdf",height = 12, width = 10)
-ggplot(data=dat, aes(x=ordinal, y = in6, group=species, color=species))+
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(swarm~site, scales="free")
-dev.off()
+#adults y=In6
+#DIp y= DIp
 
-pdf("Fig_distyear.pdf",height = 12, width = 10)
-ggplot(data=dat, aes(x=ordinal, y = in6, group=species, color=species))+
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(year~site, scales="free")
-dev.off()
-
-#DIp
-pdf("Fig_dip.pdf",height = 12, width = 10)
-ggplot(data=dat, aes(x=ordinal, y = DIp, group=species, color=species))+
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(swarm~site, scales="free")
-dev.off()
-
-pdf("Fig_dipyear.pdf",height = 12, width = 10)
-ggplot(data=dat, aes(x=ordinal, y = DIp, group=species, color=species))+
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(year~site, scales="free")
-dev.off()
-
-#----
 #plot as proportion of total
+dat$elev.lab= factor(dat$elev.lab, levels=c("1752m","2195m","2591m","3048m"))
 
-pdf("Fig_dipnorm.pdf",height = 12, width = 10)
+pdf("Fig_dipnorm.pdf",height = 11, width = 10)
 ggplot(data=dat, aes(x=ordinal, y = DIpNorm, group=species, color=species))+
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(swarm~site, scales="free")+ylim(0,0.2)
+  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(swarm~elev.lab, scales="free")+ylim(0,0.2)+
+  ylab("Proportional abundance")+xlab("Day of year")+ theme(legend.position="bottom")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))
 dev.off()
 
-pdf("Fig_dipnormyear.pdf",height = 12, width = 10)
+pdf("Fig_dipnormyear.pdf",height = 10, width = 10)
 ggplot(data=dat, aes(x=ordinal, y = DIpNorm, group=species, color=species))+
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(year~site, scales="free")+ylim(0,0.2)
-dev.off()
-
-pdf("Fig_distnorm.pdf",height = 12, width = 10)
-ggplot(data=dat, aes(x=ordinal, y = AdultNorm, group=species, color=species))+
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(swarm~site, scales="free")+ylim(0,0.2)
-dev.off()
-
-pdf("Fig_distnormyear.pdf",height = 12, width = 10)
-ggplot(data=dat, aes(x=ordinal, y = AdultNorm, group=species, color=species))+
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(year~site, scales="free")+ylim(0,0.2)
+  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(year~elev.lab, scales="free")+ylim(0,0.2)+ylab("Proportional abundance")+xlab("Day of year")
 dev.off()
 
 #---
 #by species
 pdf("Fig_distnormyear_byspec.pdf",height = 12, width = 10)
-ggplot(data=dat, aes(x=ordinal, y = AdultNorm, group=spsiteyear, color=Cdd_siteave))+
+ggplot(data=dat, aes(x=ordinal, y = DIpNorm, group=spsiteyear, color=Cdd_siteave))+
   geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(species~site, scales="free")+ylim(0,0.2)
-dev.off()
-
-pdf("Fig_distyear_byspec.pdf",height = 12, width = 10)
-ggplot(data=dat, aes(x=ordinal, y = in6, group=spsiteyear, color=Cdd_siteave))+
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(species~site, scales="free")
 dev.off()
 
 #----------------------------
@@ -369,25 +339,29 @@ match1= match(po2$elevspec, elevspec)
 po2$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","nonsignificant"))
 #---
 
-#pdf("PhenOverlap_byGDD.pdf", height = 8, width = 10)
+pdf("PhenOverlap_byGDD_days.pdf", height = 8, width = 10)
 ggplot(data=po2, aes(x=cdd_july, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
-  facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE, aes(linetype=sig.gdd))+ylab("Phenological overlap")+xlab("Growing degree days")+ 
+  facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE, aes(linetype=sig.gdd))+ylab("Phenological overlap (days)")+xlab("Growing degree days")+ 
   scale_color_manual(values=c("darkorange", "blue","darkgreen","purple"))#+xlim(200,750)
-#dev.off()
+dev.off()
 
 #**********************************************
 
-#overlap by GDD by site
-pdf("PhenOverlap_byGDD_site.pdf", height = 8, width = 10)
-ggplot(data=po1[which(po1$metric==1),], aes(x=cdd, y = value, color=sp))+geom_point(aes(shape=period, fill=period), size=2)+
-  facet_wrap(~site, drop=TRUE, scales="free")+theme_bw()+geom_smooth(method="lm", se=FALSE)+ylab("Phenological overlap")+xlab("Growing degree days")+ 
-  scale_color_manual(values=rainbow(10))+ylim(0,1)
-dev.off()
+# #overlap by GDD by site
+# pdf("PhenOverlap_byGDD_site.pdf", height = 8, width = 10)
+# ggplot(data=po1[which(po1$metric==1),], aes(x=cdd, y = value, color=sp))+geom_point(aes(shape=period, fill=period), size=2)+
+#   facet_wrap(~site, drop=TRUE, scales="free")+theme_bw()+geom_smooth(method="lm", se=FALSE)+ylab("Phenological overlap")+xlab("Growing degree days")+ 
+#   scale_color_manual(values=rainbow(20))+ylim(0,1)
+# dev.off()
 
-#just B1 and C1
-pdf("PhenOverlap_byGDD_bysite.pdf", height = 8, width = 10)
-ggplot(data=po1[which(po1$metric==1 & po1$site %in% c("A1","B1")),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE)+ylab("Phenological overlap")+xlab("Growing degree days")+ scale_color_manual(values=c("darkorange", "blue","darkgreen","purple"))
-dev.off()
+#--------------
+#Average overlap across community
+
+po.comm= ddply(po1, c("site", "year","metric","period","siteyear"), summarise,
+               value = mean(value, na.rm=TRUE), Tmean= Tmean[1], cdd=cdd[1],cdd_july=cdd_july[1],elevation=elevation[1])
+                 
+ggplot(data=po.comm[which(po.comm$metric==1),], aes(x=year, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
+  theme_bw()+geom_smooth(method="lm", se=FALSE)
 
 #===================================
 # STATS GROUP BY SPECIES
