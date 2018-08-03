@@ -55,7 +55,7 @@ sp.combs= combn(specs, 2)
 sp.combs= cbind(sp.combs, sp.combs[c(2,1),])
 
 #set up data storage
-po= array(data = 0, dim = c(length(sp.combs[1,]), length(years), length(sites),8) ) #add dimension for multiple metrics
+po= array(data = 0, dim = c(length(sp.combs[1,]), length(years), length(sites),10) ) #add dimension for multiple metrics
 
 #combine species combinations names
 sp.combs.n= paste(sp.combs[1,],sp.combs[2,],sep="_")
@@ -192,12 +192,16 @@ for(year in 1:length(years)){
         po[inds[ind.k], year, site,5]= a1
         
         #time difference metrics
+        #days focal
+        po[inds[ind.k], year, site,6]= length(which(sp1.n>0))
         #days overlap
-        po[inds[ind.k], year, site,6]= length(dinds)
+        po[inds[ind.k], year, site,7]= length(dinds)
+        #days overlap normalized
+        po[inds[ind.k], year, site,8]= length(dinds)/length(which(sp1.n>0))
         #days difference in peak
-        po[inds[ind.k], year, site,7]= abs(which.max(sp1.n)-which.max(sp2.n))
+        po[inds[ind.k], year, site,9]= abs(which.max(sp1.n)-which.max(sp2.n))
         #days difference in 20% of peak
-        po[inds[ind.k], year, site,8]= abs(which.max(sp1.n>max(sp1.n)*0.2) - which.max(sp2.n>max(sp2.n)*0.2) )
+        po[inds[ind.k], year, site,10]= abs(which.max(sp1.n>max(sp1.n)*0.2) - which.max(sp2.n>max(sp2.n)*0.2) )
         
         } #end check each species has at least 4 dates
       } #end loop species combinations
@@ -276,14 +280,7 @@ hop.agg= hop.agg[order(hop.agg$ordinal),]
 po1$sp1= factor(po1$sp1, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes", "Melanoplus dawsoni", "Chloealtis abdominalis"))
 po1$sp2= factor(po1$sp2, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes", "Melanoplus dawsoni", "Chloealtis abdominalis"))
 
-#plot
-pdf("PhenOverlap_byYear.pdf", height = 10, width = 10)
-ggplot(data=po1[which(po1$metric==3),], aes(x=year, y = value, color=site, shape=period))+geom_point() +facet_grid(sp1~sp2, drop=TRUE)+theme_bw() +geom_smooth(method=lm, se=FALSE) #geom_line
-dev.off() 
-
-#--------
-#plot by temp and gdd
-
+#PLOT
 #add elevation
 po1$elevation= as.factor(elevs[match(po1$site, sites)])
 
@@ -293,16 +290,8 @@ po1$elevation= as.factor(elevs[match(po1$site, sites)])
 #focus on sites B1 and C1 for now
 #po1= po1[which(po1$site %in% c("B1", "C1")) ,] #[which(po1$metric==2),] #
 
-#plot
-
-#overlap by temp
-pdf("PhenOverlap_byTemp.pdf", height = 10, width = 10)
-ggplot(data=po1[which(po1$metric==3),], aes(x=Tmean, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
-  facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE)
-dev.off()
-
 #*********************************************
-#overlap by GDD
+#Plot overlap
 
 #assess significance
 #calculate significant regressions
@@ -312,9 +301,12 @@ elevspec= matrix(unique(po1$elevspec))
 
 #---
 #EXTRACT COEFFS
-po2= po1[which(po1$metric==6),]
+po2= po1[which(po1$metric==3),]
+#x1="cdd_july"
+#x1="year"
+x1="Tmean"
 
-p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(value~cdd_july, data=po2[which(po2$elevation==substr(x,1,4)& po2$sp==substr(x,5,nchar(x)) ),] ))$coefficients[2,])
+p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(value~get(x1), data=po2[which(po2$elevation==substr(x,1,4)& po2$sp==substr(x,5,nchar(x)) ),] ))$coefficients[2,])
 
 #combine
 p.mat=as.data.frame(cbind(elevspec,t(p.gdd) ))
@@ -324,26 +316,23 @@ p.mat$`Std. Error`= as.numeric(as.character(p.mat$`Std. Error`))
 #CIs
 p.mat$upCI= p.mat$Estimate + 1.96*p.mat$`Std. Error`
 p.mat$lowCI= p.mat$Estimate - 1.96*p.mat$`Std. Error`
-#---
 
-#extract p-values
-p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(value~cdd_july, data=po2[which(po2$elevation==substr(x,1,4)& po2$sp==substr(x,5,nchar(x)) ),] ))$coefficients[2,4])
-#combine
-p.mat=as.data.frame(cbind(elevspec,p.gdd))
 #add columns for significance
 p.mat$sig.gdd<-"nonsignificant"
-p.mat$sig.gdd[which(p.gdd<0.05)]="significant"
+p.mat$sig.gdd[which(p.gdd[4,]<0.05)]="significant"
 
 #add back to matrix
 match1= match(po2$elevspec, elevspec)
 po2$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","nonsignificant"))
 #---
 
-pdf("PhenOverlap_byGDD_days.pdf", height = 8, width = 10)
-ggplot(data=po2, aes(x=cdd_july, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
-  facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE, aes(linetype=sig.gdd))+ylab("Phenological overlap (days)")+xlab("Growing degree days")+ 
+#pdf("PhenOverlap_byGDD_days.pdf", height = 8, width = 10)
+ggplot(data=po2, aes_string(x=x1, y = "value", color="elevation"))+geom_point(aes(shape=period, fill=period), size=2)+
+  facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE, aes(linetype=sig.gdd))+ 
   scale_color_manual(values=c("darkorange", "blue","darkgreen","purple"))#+xlim(200,750)
-dev.off()
+#dev.off()
+
+#+ylab("Phenological overlap (days)")+xlab("Growing degree days")
 
 #**********************************************
 
