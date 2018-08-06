@@ -301,10 +301,10 @@ elevspec= matrix(unique(po1$elevspec))
 
 #---
 #EXTRACT COEFFS
-po2= po1[which(po1$metric==3),]
-#x1="cdd_july"
+po2= po1[which(po1$metric==7),] #3,7
+x1="cdd_july"
 #x1="year"
-x1="Tmean"
+#x1="Tmean"
 
 p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(value~get(x1), data=po2[which(po2$elevation==substr(x,1,4)& po2$sp==substr(x,5,nchar(x)) ),] ))$coefficients[2,])
 
@@ -326,11 +326,11 @@ match1= match(po2$elevspec, elevspec)
 po2$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","nonsignificant"))
 #---
 
-#pdf("PhenOverlap_byGDD_days.pdf", height = 8, width = 10)
+pdf("PhenOverlap_byGDD_days.pdf", height = 8, width = 10)
 ggplot(data=po2, aes_string(x=x1, y = "value", color="elevation"))+geom_point(aes(shape=period, fill=period), size=2)+
   facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE, aes(linetype=sig.gdd))+ 
   scale_color_manual(values=c("darkorange", "blue","darkgreen","purple"))#+xlim(200,750)
-#dev.off()
+dev.off()
 
 #+ylab("Phenological overlap (days)")+xlab("Growing degree days")
 
@@ -359,22 +359,34 @@ po2= po1[which(po1$metric==4),]
 mod1= lm(value~ cdd*elevation+sp2+sp1, data=po2)
 mod1= lm(value~ cdd*as.numeric(as.character(elevation))+sp, data=po2)
 
+#---------------
 #by focal species
 sp.k=5
 po3= subset(po2, po2$sp1==specs[sp.k] ) #subset(po2, po2$sp1==specs[sp.k] | po2$sp2==specs[sp.k])
-#switch species order
-p.temp= po3$sp1
-inds= which(po3$sp2==specs[sp.k])
-if(length(inds)>0){
- po3$sp1[inds]=specs[sp.k] 
- po3$sp2[inds]=po3$sp1[inds] 
-}
+# #switch species order
+# p.temp= po3$sp1
+# inds= which(po3$sp2==specs[sp.k])
+# if(length(inds)>0){
+#  po3$sp1[inds]=specs[sp.k] 
+#  po3$sp2[inds]=po3$sp1[inds] 
+# }
 
 po3$elevation= as.numeric(as.character(po3$elevation))
 mod1= lm(value~ cdd_july+cdd_july:elevation+cdd_july:sp2, data=po3)
 specs[sp.k]
 summary(mod1)
 
+#---------------
+#early vs late
+require(nlme)
+require(lme4)
+
+po3$timing="early"
+po3$timing[which(po3$sp2 %in% specs[c(1,4)])]<-"late"
+
+#mod1= lme(value~ cdd_july+cdd_july:elevation,random=~1|sp2 , data=po3)
+mod1= lme(value~ cdd_july+cdd_july:elevation+cdd_july:timing,random=~1|sp2 , data=po3)
+summary(mod1)
 #--------------------------------
 
 
