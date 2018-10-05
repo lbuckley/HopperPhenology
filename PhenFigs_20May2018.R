@@ -260,33 +260,46 @@ dat$gdd_adult= dout[match(dat$spsiteyear, dout$spsiteyear),"gdd_adult"]
 #plot
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenology/figures/")
 
-plot_gdd_elev=ggplot(data=clim1, aes(x=elevation, y = Cdd_seas, group=Year, color=Cdd_siteave, linetype=period))+
+#check years with GDD data
+clim2= aggregate(clim1, list(clim1$Year), FUN=mean)
+
+#subset to years with data for all
+clim2= subset(clim1, clim$Year %in% c(1958:1969, 2006:2011,2014) )
+
+plot_gdd_elev=ggplot(data=clim2, aes(x=elevation, y = Cdd_seas, group=Year, color=Cdd_siteave, linetype=period))+
   geom_line()+ #geom_point()+
   scale_colour_gradientn(name="mean season gdd", colours =matlab.like(10))+
   theme_bw()+ylab("season growing degree days (C)")+xlab("elevation (m)")
+
 #-------
-#Plot ave phenology accross years
+#Plot ave phenology across years
 
 #elevation to numeric
 dat$elevation= as.numeric(as.character(dat$elev))
 
 #aggregte to spsiteyear
-dat.ave= aggregate(dat, list(dat$spsiteyear, dat$species),FUN=mean, na.rm=TRUE)
-dat.ave$species= dat.ave$Group.2
+dat.ave= aggregate(dat, list(dat$spsiteyear, dat$species, dat$site, dat$year, dat$siteyear),FUN=mean, na.rm=TRUE)
+names(dat.ave)[1:5]= c('spsiteyear', 'species', 'site', 'year','siteyear')
+
+#check siteyear
+dat.ave2= aggregate(dat.ave, list(dat.ave$siteyear), FUN=length)
+#restrict to years with data across sites, 2007:2011
+dat.ave= subset(dat.ave, dat.ave$year %in% 2007:2011)
 
 #average across years
 dat.ave= aggregate(dat.ave, list(dat.ave$elevation, dat.ave$species),FUN=mean, na.rm=TRUE )
 dat.ave$species= dat.ave$Group.2
 
-dat.ave1<- dat.ave[ which(!is.na(dat.ave$doy_adult)),]
-
-plot_gdds_elev=ggplot(data=dat.ave1, aes(x=elevation, y = gdd_adult, group=species, color=species))+
+plot_gdds_elev=ggplot(data=dat.ave, aes(x=elevation, y = gdd_adult, group=species, color=species))+
   geom_line()+ geom_point()+
   theme_bw()+ylab("cummulative growing degree days (C)")+xlab("elevation (m)")
 
-plot_doy_elev=ggplot(data=dat.ave1, aes(x=elevation, y = doy_adult, group=species, color=species))+
+plot_doy_elev=ggplot(data=dat.ave, aes(x=elevation, y = doy_adult, group=species, color=species))+
   geom_line()+ geom_point()+
   theme_bw()+ylab("day of year")+xlab("elevation (m)")+theme(legend.position="none")
+
+#check data
+unique(dat$siteyear)
 
 #----------
 
@@ -330,6 +343,34 @@ pdf("FigSX_plot_DIgdd.pdf", height = 10, width = 12)
 di.plot.gdd
 dev.off()
 
+#--------
+#Calculate r^2 and slope of polynomial
+#across years
+#stop when reach adulthood
+
+#combination of sp and sites
+dat$spsite= paste(dat$species, dat$site, sep="_")
+spsites= unique(dat$spsite)
+
+rs= as.data.frame(matrix(NA, length(spsites), 5))
+rs[,1]=spsites
+rs[,4]=matrix(unlist(strsplit(spsites, split="_")),ncol=2, byrow=T)[,1]
+rs[,5]=matrix(unlist(strsplit(spsites, split="_")),ncol=2, byrow=T)[,2]
+
+for(ind in 1:length(spsites) ){
+ dat.ss= subset(dat, dat$spsite==spsites[ind])
+ dat.ss$yeardi= paste(dat.ss$year, as.character(round(dat.ss$DI,2)), sep="" )
+#sort by ordinal date
+ dat.ss=dat.ss[order(dat.ss$yeardi),]
+ #drop data once reach DI=6
+ dat.ss=dat.ss[ (duplicated(dat.ss$yeardi)==TRUE & dat.ss$DI>=6)==FALSE,]
+ 
+ #calculate slope and r2
+modr= summary(lm(DI~poly(cdd_sum,2,raw=TRUE), data=dat.ss ))
+rs[ind,2]= modr$coefficients[2,1]
+rs[ind,3]= modr$r.squared
+}
+
 #--------------------
 #plot with variable x axis
 
@@ -338,8 +379,10 @@ di.plot.gdd.free= ggplot(data=dat, aes(x=cdd_sum, y = DI, color=Cdd_siteave, gro
   theme_bw()+
   geom_point()+geom_line(aes(alpha=0.5))+ #+geom_smooth(se=FALSE, aes(alpha=0.5),span=2)+
   scale_colour_gradientn(colours =matlab.like(10))+ylab("development index")+xlab("cummulative growing degree days")+labs(color="mean season gdds")+
-  theme(legend.position = "bottom") + guides(alpha=FALSE)
+  theme(legend.position = "bottom") + guides(alpha=FALSE)+ geom_text(aes(x=200, y=5, label=V2, group=NULL), color="black", data=rs) 
+##FIX
 
+#--------
 pdf("FigSX_plot_DIgdd_freex.pdf", height = 10, width = 12)
 di.plot.gdd.free
 dev.off()
