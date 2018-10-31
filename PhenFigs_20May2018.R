@@ -368,19 +368,27 @@ for(ind in 1:length(spsites) ){
  #calculate slope and r2
 modr= summary(lm(DI~poly(cdd_sum,2,raw=TRUE), data=dat.ss ))
 rs[ind,2]= modr$coefficients[2,1]
-rs[ind,3]= modr$r.squared
+rs[ind,3]= round(modr$r.squared,2)
 }
+
+#update names
+colnames(rs)=c("spsites","coeffs","rsquared","species","site")
+
+#add elev lab
+match1= match(rs$site, sites)
+rs$elev.lab= paste(elevs[match1],"m",sep="")
 
 #--------------------
 #plot with variable x axis
 
-di.plot.gdd.free= ggplot(data=dat, aes(x=cdd_sum, y = DI, color=Cdd_siteave, group=siteyear, linetype=period))+
+di.plot.gdd.free= ggplot(data=dat, aes(x=cdd_sum, y = DI,  group=siteyear))+ #, 
   facet_grid(species~elev.lab, scales="free_x") +
   theme_bw()+
-  geom_point()+geom_line(aes(alpha=0.5))+ #+geom_smooth(se=FALSE, aes(alpha=0.5),span=2)+
+  geom_point(aes(color=Cdd_siteave))+geom_line(aes(alpha=0.5,color=Cdd_siteave,linetype=period))+ #+geom_smooth(se=FALSE, aes(alpha=0.5),span=2)+
   scale_colour_gradientn(colours =matlab.like(10))+ylab("development index")+xlab("cummulative growing degree days")+labs(color="mean season gdds")+
-  theme(legend.position = "bottom") + guides(alpha=FALSE)+ geom_text(aes(x=200, y=5, label=V2, group=NULL), color="black", data=rs) 
-##FIX
+  theme(legend.position = "bottom") + guides(alpha=FALSE)
+
+di.plot.gdd.free.text= di.plot.gdd.free + geom_text(data=rs, mapping=aes(x=200, y=5, label=rsquared, group=NULL)) 
 
 #--------
 pdf("FigSX_plot_DIgdd_freex.pdf", height = 10, width = 12)
