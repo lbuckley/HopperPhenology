@@ -9,10 +9,14 @@ require(MuMIn)
 
 #Fig 1. Elevation patterns
 
+#subset to years with data for all
+clim2= subset(clim1, clim$Year %in% c(1958:1969, 2006:2011,2014) )
+
 #GDDS~elevation
-clim2= clim1[,c("Site","Year","elevation","period","Cdd_seas") ]
-clim2= na.omit(clim2)
-mod1= lme(Cdd_seas~elevation*period,random=~1|Year , data=clim2)
+clim3= clim2[,c("Site","Year","elevation","period","Cdd_seas") ]
+clim3= na.omit(clim3)
+mod1= lme(Cdd_seas~elevation*period,random=~1|Year , data=clim3)
+anova(mod1)
 
 #---
 #Phenology~elevation
@@ -21,6 +25,9 @@ dat1= as.data.frame( dat[,c("doy_adult", "gdd_adult", "elevation","species","per
 dat1= na.omit(dat1)
 #abbreviate species names
 dat1$spec= substr(dat1$species, 11,14)
+
+#restrict to years with data across sites, 2007:2011
+dat1= subset(dat1, dat1$year %in% 2007:2011)
 
 #ordinal
 mod1= lme(doy_adult~elevation*species,random=~1|year , data=dat1)

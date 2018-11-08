@@ -46,6 +46,8 @@ clim1$Mean= (clim1$Min + clim1$Max)/2
 clim1$Mean_summer= clim1$Mean
 clim1[clim1$Julian<60 | clim1$Julian>243,"Mean_summer"]=NA
 
+cdat=clim1
+
 #metrics across years
 clim1= ddply(clim1, c("Site", "Year"), summarise,
              Mean = mean(Mean_summer, na.rm=TRUE), Cdd_seas = max(cdd_sum, na.rm=FALSE), Cdd_seasfall = max(cdd_sumfall, na.rm=FALSE), Cdd_july = max(cdd_july, na.rm=TRUE) )
@@ -352,10 +354,10 @@ dev.off()
 dat$spsite= paste(dat$species, dat$site, sep="_")
 spsites= unique(dat$spsite)
 
-rs= as.data.frame(matrix(NA, length(spsites), 5))
+rs= as.data.frame(matrix(NA, length(spsites), 7))
 rs[,1]=spsites
-rs[,4]=matrix(unlist(strsplit(spsites, split="_")),ncol=2, byrow=T)[,1]
-rs[,5]=matrix(unlist(strsplit(spsites, split="_")),ncol=2, byrow=T)[,2]
+rs[,2]=matrix(unlist(strsplit(spsites, split="_")),ncol=2, byrow=T)[,1]
+rs[,3]=matrix(unlist(strsplit(spsites, split="_")),ncol=2, byrow=T)[,2]
 
 for(ind in 1:length(spsites) ){
  dat.ss= subset(dat, dat$spsite==spsites[ind])
@@ -366,19 +368,37 @@ for(ind in 1:length(spsites) ){
  dat.ss=dat.ss[ (duplicated(dat.ss$yeardi)==TRUE & dat.ss$DI>=6)==FALSE,]
  
  #calculate slope and r2
+ #by cdd_sum
 modr= summary(lm(DI~poly(cdd_sum,2,raw=TRUE), data=dat.ss ))
-rs[ind,2]= modr$coefficients[2,1]
-rs[ind,3]= round(modr$r.squared,2)
+rs[ind,4]= modr$coefficients[2,1]
+rs[ind,5]= round(modr$r.squared,2)
+#by doy
+modr= summary(lm(DI~poly(ordinal,2,raw=TRUE), data=dat.ss ))
+rs[ind,6]= modr$coefficients[2,1]
+rs[ind,7]= round(modr$r.squared,2)
+
 }
 
 #update names
-colnames(rs)=c("spsites","coeffs","rsquared","species","site")
+colnames(rs)=c("spsites","species","site","coeffs.cdd","rsquared.cdd","coeffs.doy","rsquared.doy")
 
 #add elev lab
+xpos= c(1000,700,500,250)
 match1= match(rs$site, sites)
 rs$elev.lab= paste(elevs[match1],"m",sep="")
+rs$rs.cdd.lab= paste("r2=",rs$rsquared.cdd, sep="")
+rs$rs.doy.lab= paste("r2=",rs$rsquared.doy, sep="")
+rs$xpos= xpos[match1]
+
+#analyze r2
+mod1= lm(rsquared.cdd~species+site, data=rs)
+mod1= lm(rsquared.doy~species+site, data=rs)
+
+#drop lone C. abdominalis point
+dat=dat[-which(dat$species=="Chloealtis abdominalis" & dat$year==2008 & dat$site=="A1"),]
 
 #--------------------
+#Fig 2. CDD
 #plot with variable x axis
 
 di.plot.gdd.free= ggplot(data=dat, aes(x=cdd_sum, y = DI,  group=siteyear))+ #, 
@@ -388,15 +408,28 @@ di.plot.gdd.free= ggplot(data=dat, aes(x=cdd_sum, y = DI,  group=siteyear))+ #,
   scale_colour_gradientn(colours =matlab.like(10))+ylab("development index")+xlab("cummulative growing degree days")+labs(color="mean season gdds")+
   theme(legend.position = "bottom") + guides(alpha=FALSE)
 
-di.plot.gdd.free.text= di.plot.gdd.free + geom_text(data=rs, mapping=aes(x=200, y=5, label=rsquared, group=NULL)) 
+di.plot.gdd.free.text= di.plot.gdd.free + geom_text(data=rs, mapping=aes(x=xpos, y=1.5, label=rs.cdd.lab, group=NULL)) # 
 
-#--------
-pdf("FigSX_plot_DIgdd_freex.pdf", height = 10, width = 12)
-di.plot.gdd.free
+pdf("Fig2_DIgdd_r2.pdf", height = 12, width = 10)
+di.plot.gdd.free.text
+dev.off()
+
+#--------------------
+#Fig 3. DOY
+di.plot= ggplot(data=dat, aes(x=ordinal, y = DI, group=siteyear))+facet_grid(species~elev.lab) +
+  theme_bw()+
+  geom_point(aes(color=Cdd_siteave))+geom_line(aes(alpha=0.5,color=Cdd_siteave, linetype=period))+ #+geom_smooth(se=FALSE, aes(alpha=0.5), span=2)+
+  scale_colour_gradientn(colours =matlab.like(10))+ylab("development index")+xlab("day of year")+labs(color="mean season gdds")+
+  theme(legend.position = "bottom") + guides(alpha=FALSE)
+
+di.plot.text= di.plot + geom_text(data=rs, mapping=aes(x=250, y=1.5, label=rs.doy.lab, group=NULL)) 
+
+pdf("Fig3_DIdoy_r2.pdf", height = 12, width = 10)
+di.plot.text
 dev.off()
 
 #====================================
-## FIGURE 3.
+## FIGURE 4.
 # PLOT ADULT PHENOLOGY
 # estimated by DI
 
@@ -440,8 +473,13 @@ p.mat$sig.gdd[which(p.gdd<0.05)]="significant"
 match1= match(dat.ssy$elevspec, elevspec)
 dat.ssy$sig.doy= factor(p.mat[match1,"sig.doy"], levels=c("significant","nonsignificant"))
 dat.ssy$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","nonsignificant"))
-#---
+#---------
+#Calculate mean initial and resurvey
+data.m= aggregate(dat.ssy, by=list(dat.ssy$period, dat.ssy$species, dat.ssy$elev.lab), FUN="mean")
+names(data.m)[1:3]=c("period","species","elev.lab")
+data.m= data.m[,c(1:3,6:8)]
 
+#------
 #DOY
 plot.phen.doye=ggplot(data=dat.ssy, aes(x=cdd_seas, y = doy_adult, color=species))+
   geom_point(aes(shape=period, fill=species, alpha=period, stroke=1), size=3)+
@@ -451,6 +489,16 @@ plot.phen.doye=ggplot(data=dat.ssy, aes(x=cdd_seas, y = doy_adult, color=species
   theme_bw()+ylab("day of year")+xlab("season growing degree days (C)")+
   scale_shape_manual(values = c(21, 22, 23))+
   scale_alpha_manual(values = c(0.2,0.9))+theme(legend.position="none")
+
+# plot.phen.doye=ggplot(data=dat.ssy, aes(y = doy_adult, color=species))+
+#   geom_point(aes(x=cdd_seas, shape=period, fill=species, alpha=period, stroke=1), size=3)+
+#   geom_point(aes(x=cdd_seas, shape=period, fill=NULL, stroke=1), size=3)+
+#   geom_smooth(aes(x=cdd_seas, linetype=sig.doy), method="lm",se=F)+
+#   facet_wrap(~elev.lab, ncol=1, scales="free") +
+#   theme_bw()+ylab("day of year")+xlab("season growing degree days (C)")+
+#   geom_point(data=data.m, aes(x=cdd_seas, shape=period, fill=species, alpha=period, stroke=1), size=5)+
+#   scale_shape_manual(values = c(21, 22, 23))+
+#   scale_alpha_manual(values = c(0.2,0.9))+theme(legend.position="none") 
 
 #GDD
 plot.phen.gdde=ggplot(data=dat.ssy, aes(x=cdd_seas, y = gdd_adult, color=species))+
@@ -463,7 +511,7 @@ plot.phen.gdde=ggplot(data=dat.ssy, aes(x=cdd_seas, y = gdd_adult, color=species
   scale_shape_manual(values = c(21, 22, 23))+
   scale_alpha_manual(values = c(0.2,0.9))
 
-pdf("Fig3_phen_est.pdf", height = 12, width = 10)
+pdf("Fig4_phen_est.pdf", height = 12, width = 10)
 plot_grid(plot.phen.doye, plot.phen.gdde, nrow=1, rel_widths=c(1,1.5) )
 dev.off()
 
@@ -631,5 +679,82 @@ pdf("Fig_duration.pdf",height = 8, width = 5)
 plot.dur
 dev.off()
 
-#--------------
+#===========================================
+# TRY CLIMWIN ANALYSIS
+
+install.packages("climwin")
+library(climwin)
+
+#Format data
+#across species and sites
+
+dout.nona= dout[which(!is.na(dout$doy_adult)),]
+
+match1= match(dout.nona$spsiteyear, dat$spsiteyear) 
+dout.nona$species= dat[match1, "species"] 
+dout.nona$site= dat[match1, "site"] 
+dout.nona$year= dat[match1, "year"] 
+
+#climate data
+#cdat= hop[,c("date","ordinal","species","year","site","dd","dd_sum","cdd_sum","cdd_sumfall")]
+cdat= cdat[,c("Site", "Julian", "Year", "Max", "Min", "dd","dd_sum","dd_sumfall")] 
+cdat$date= as.Date(cdat$Julian, origin = paste(cdat$Year, "-01-01", sep="") )
+cdat$date= format(cdat$date, format = "%d/%m/%Y")
+
+#add date to dout
+dout.nona$doysiteyear= paste(dout.nona$doy_adult,dout.nona$site,dout.nona$year, sep="")
+dout.nona$date= as.Date(dout.nona$doy_adult, origin = paste(dout.nona$year, "-01-01", sep=""))
+bdat= dout.nona
+bdat$date= format(bdat$date, format = "%d/%m/%Y")
+
+#restrict to sites
+cdat1=cdat #[which(cdat$Site=="B1"),]
+bdat1=bdat #[which(bdat$species=="Melanoplus boulderensis"),]
+bdat1$phen=1
+
+pwin <- slidingwin(xvar = list(Temp = cdat1$dd), exclude=c(21,14),
+                      cdate = cdat1$date,
+                      bdate = bdat1$date,
+                      baseline = lm(doy_adult ~ 1, data = bdat1),
+                      cinterval = "day",
+                      range = c(80, 0),
+                      type = "relative",
+                      stat = "mean",
+                      func = "lin", spatial = list(bdat1$site, cdat1$Site), cmissing="method1", cohort=bdat1$year) # 
+
+prand <- randwin(repeats = 5, xvar = list(Temp = cdat1$dd), exclude=c(21,14),
+                 cdate = cdat1$date,
+                 bdate = bdat1$date,
+                 baseline = lm(doy_adult ~ 1, data = bdat1),
+                 cinterval = "day",
+                 range = c(60, 0),
+                 type = "relative",
+                 stat = "mean",
+                 func = "lin", spatial = list(bdat1$site, cdat1$Site), cmissing="method1", cohort=bdat1$year)
+
+psingle <- singlewin(xvar = list(Temp = cdat1$dd), 
+                      cdate = cdat1$date,
+                      bdate = bdat1$date,
+                      baseline = lm(doy_adult ~ 1, data = bdat1),
+                      cinterval = "day",
+                      range = c(60, 0),
+                      type = "relative",
+                      stat = "mean",
+                      func = "lin", spatial = list(bdat1$site, cdat1$Site), cmissing="method1", cohort=bdat1$year) 
+
+#p-value
+pvalue(dataset = pwin[[1]]$Dataset, datasetrand = prand[[1]], metric = "C", sample.size = 52)
+
+pOutput <- pwin[[1]]$Dataset
+pRand <- prand[[1]]
+
+plotdelta(dataset = pOutput)
+plotbetas(dataset = pOutput)
+
+plotall(dataset = pOutput,
+        datasetrand = pRand,
+        bestmodel = psingle$BestModel, 
+        bestmodeldata = psingle$BestModelData)
+
+
 
