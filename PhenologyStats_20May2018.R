@@ -76,6 +76,13 @@ di.dat2$species[1]
 #summary(mod1)
 anova(mod2, type="marginal")
 
+#analyze by GDD and ordinal date
+mod3= lme(DI~poly(cdd_sumfall, order=3)+ poly(ordinal, order=3) + poly(cdd_sumfall, order=3):period + poly(cdd_sumfall, order=3):cdd_seas+poly(cdd_sumfall, order=3):elev+poly(cdd_sumfall, order=3):cdd_seas:elev, random=~1|spsiyr, data=di.dat2)
+
+di.dat2$species[1]
+#summary(mod1)
+anova(mod3, type="marginal")
+
 #----------------
 #Fig 3. Adult Phenology
 

@@ -304,11 +304,56 @@ plot_doy_elev=ggplot(data=dat.ave, aes(x=elevation, y = doy_adult, group=species
 unique(dat$siteyear)
 
 #----------
-
 #plot together
-fig0= plot_grid(plot_gdd_elev, plot_doy_elev, plot_gdds_elev, labels = c('A', 'B','C'), rel_widths=c(1.2,0.75,1.3), nrow=1)
+fig0= plot_grid(plot_gdd_elev, plot_doy_elev, plot_gdds_elev, labels = c('a', 'b','c'), rel_widths=c(1.2,0.75,1.3), nrow=1)
 
 pdf("Fig1_GDD_phen_byElev.pdf", height = 5, width = 12)
+fig0
+dev.off()
+
+#========
+#just original data then just resurvey
+
+#aggregte to spsiteyear
+dat.ave= aggregate(dat, list(dat$spsiteyear, dat$species, dat$site, dat$year, dat$siteyear),FUN=mean, na.rm=TRUE)
+names(dat.ave)[1:5]= c('spsiteyear', 'species', 'site', 'year','siteyear')
+
+#check siteyear
+dat.ave2= aggregate(dat.ave, list(dat.ave$siteyear), FUN=length)
+#restrict to initial years
+dat.ave.a= subset(dat.ave, dat.ave$year %in% 1958:1960)
+
+#average across years
+dat.ave.a= aggregate(dat.ave.a, list(dat.ave.a$elevation, dat.ave.a$species),FUN=mean, na.rm=TRUE )
+dat.ave.a$species= dat.ave.a$Group.2
+
+plot_gdds_elev.a=ggplot(data=dat.ave.a, aes(x=elevation, y = gdd_adult, group=species, color=species))+
+  geom_line()+ geom_point()+
+  theme_bw()+ylab("cummulative growing degree days (C)")+xlab("elevation (m)")
+
+plot_doy_elev.a=ggplot(data=dat.ave.a, aes(x=elevation, y = doy_adult, group=species, color=species))+
+  geom_line()+ geom_point()+
+  theme_bw()+ylab("day of year")+xlab("elevation (m)")+theme(legend.position="none")
+#---
+#restrict to resurvey years
+dat.ave.a= subset(dat.ave, dat.ave$year %in% 2007:2015)
+
+#average across years
+dat.ave.a= aggregate(dat.ave.a, list(dat.ave.a$elevation, dat.ave.a$species),FUN=mean, na.rm=TRUE )
+dat.ave.a$species= dat.ave.a$Group.2
+
+plot_gdds_elev.r=ggplot(data=dat.ave.a, aes(x=elevation, y = gdd_adult, group=species, color=species))+
+  geom_line()+ geom_point()+
+  theme_bw()+ylab("cummulative growing degree days (C)")+xlab("elevation (m)")
+
+plot_doy_elev.r=ggplot(data=dat.ave.a, aes(x=elevation, y = doy_adult, group=species, color=species))+
+  geom_line()+ geom_point()+
+  theme_bw()+ylab("day of year")+xlab("elevation (m)")+theme(legend.position="none")
+#---
+#plot together
+fig0= plot_grid(plot_doy_elev.a, plot_gdds_elev.a,plot_doy_elev.r, plot_gdds_elev.r, labels = c('b initial','c initial','b resurvey','c resurvey'), rel_widths=c(0.75,1.3), nrow=2)
+
+pdf("Fig1_bc_initialresurvey.pdf", height = 10, width = 8)
 fig0
 dev.off()
 
