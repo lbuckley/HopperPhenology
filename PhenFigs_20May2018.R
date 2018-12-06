@@ -801,5 +801,32 @@ plotall(dataset = pOutput,
         bestmodel = psingle$BestModel, 
         bestmodeldata = psingle$BestModelData)
 
+#=============================
+#Figure for rearing experiment figure
+dat.mb= dat[which(dat$species=="Melanoplus boulderensis"),]
+
+#update elevation labels
+dat.mb$elev.lab= paste(dat.mb$elev,"m",sep="")
+dat.mb$elev.lab= factor(dat.mb$elev.lab, levels=c("3048m","2591m","2195m","1752m") )
+
+di.plot.mb= ggplot(data=dat.mb, aes(x=ordinal, y = DI, color=Cdd_siteave, group=siteyear, linetype=period))+facet_wrap(dat.mb$elev.lab, ncol=1) +
+  theme_bw()+
+  geom_point()+geom_line(aes(alpha=0.5))+ #+geom_smooth(se=FALSE, aes(alpha=0.5), span=2)+
+  scale_colour_gradientn(colours =matlab.like(10))+ylab("development index")+xlab("day of year")+labs(color="mean season gdds")+
+  theme(legend.position = "bottom") + guides(alpha=FALSE)+xlim(125,200)
+
+#Plot DI by GDD
+di.plot.gdd.mb= ggplot(data=dat.mb, aes(x=cdd_sum, y = DI, color=Cdd_siteave, group=siteyear, linetype=period))+facet_wrap(dat.mb$elev.lab, ncol=1) +
+  theme_bw()+
+  geom_point()+geom_line(aes(alpha=0.5))+ #+geom_smooth(se=FALSE, aes(alpha=0.5),span=2)+
+  scale_colour_gradientn(colours =matlab.like(10))+ylab("development index")+xlab("cummulative growing degree days")+labs(color="mean season gdds")+
+  xlim(0,350)+
+  theme(legend.position = "bottom") + guides(alpha=FALSE)
+
+#----
+
+pdf("Fig4__DI_boulderensis.pdf",height = 10, width = 12)
+plot_grid(di.plot.mb, di.plot.gdd.mb, nrow=1, rel_widths=c(1,1),labels = c('a','b'))
+dev.off()
 
 
