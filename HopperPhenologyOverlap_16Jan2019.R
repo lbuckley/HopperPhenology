@@ -16,10 +16,15 @@ dat.all$diapause="egg"
 dat.all$species= as.character(dat.all$species)
 dat.all$diapause[which(dat.all$species %in% c("Arphia conspersa","Eritettix simplex","Pardalaphoa apiculata","Xanthippus corallipes"))]="nymph"
 
+#fix names
+dat.all$species[which(dat.all$species=="Melanoplus bivatattus")]="Melanoplus bivittatus"
+
 #focal species
 specs= c("Aeropedellus clavatus","Camnula pellucida","Melanoplus dawsoni","Melanoplus boulderensis","Melanoplus sanguinipes","Arphia conspersa","Eritettix simplex","Pardalaphoa apiculata","Xanthippus corallipes") #"Chloealtis abdominalis",
 #subset to focal species
-dat= subset(dat.all, dat.all$species %in% specs)
+##dat= subset(dat.all, dat.all$species %in% specs)
+#keep all species
+dat=dat.all
 
 years= unique(na.omit(hop$year))
 sites= unique(hop$site)
@@ -85,8 +90,11 @@ dat$swarm= as.factor(round(dat$Cdd_july_siteave,2))
 #DIp y= DIp
 
 #plot as proportion of total
-dat$elev.lab= factor(dat$elev.lab, levels=c("1752m","2195m","2591m","3048m"))
+dat$elev.lab= paste(dat$elev,"m",sep="")
+factor(dat$elev.lab, levels=c("1752m","2195m","2591m","3048m"))
 dat$diapause= as.factor(dat$diapause)
+
+setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/figures/")
 
 pdf("Fig_dipnorm.pdf",height = 11, width = 10)
 ggplot(data=dat, aes(x=ordinal, y = DIpNorm, group=species, color=species, lty=diapause))+
@@ -102,12 +110,110 @@ dev.off()
 
 #---
 #by species
-pdf("Fig_distnormyear_byspec.pdf",height = 12, width = 10)
-ggplot(data=dat, aes(x=ordinal, y = DIpNorm, group=spsiteyear, color=Cdd_siteave))+
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(species~site, scales="free")+ylim(0,0.2)
+pdf("Fig_distnormyear_byspec.pdf",height = 20, width = 10)
+ggplot(data=dat, aes(x=ordinal, y = DIpNorm, group=spsiteyear, color=Cdd_siteave, lty=diapause))+
+  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(species~site, scales="free")+ylim(0,0.2)+
+  theme(strip.text.y = element_text(angle = 0))
 dev.off()
 
-#----------------------------
+#No normalization
+pdf("Fig_distyear_byspec.pdf",height = 20, width = 10)
+ggplot(data=dat, aes(x=ordinal, y = DIp, group=spsiteyear, color=Cdd_siteave, lty=diapause))+
+  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(species~site, scales="free")+
+  theme(strip.text.y = element_text(angle = 0))
+dev.off()
+
+#========================================
+#Fit distributions
+#fit beta: mode, breadth, skewness
+
+#fit gaussian
+fitG =
+  function(x,y,mu,sig,scale){
+    
+    f = function(p){
+      d = p[3]*dnorm(x,mean=p[1],sd=p[2])
+      sum((d-y)^2)
+    }
+    
+    optim(c(mu,sig,scale),f)
+  }
+#fit= fitG(temp,y,mu=200, sig=1, scale=1)
+
+#data storage
+fits= array(data=NA, dim=c(length(specs), length(years), length(sites),3), list(specs,years,sites,c("mu","sig","scale")) )
+
+colors= rainbow(9)
+
+pdf("Fits.pdf", height = 10, width = 10)
+par(mfrow=c(5,5))
+
+for(year in 1:length(years)){
+  for(site in 1:length(sites)){
+    
+    dat.sub= dat[which(dat$year==years[year] & dat$site==sites[site] ),]
+
+    spec.inds= which(specs %in% dat.sub$species )
+    
+    for(spec.ind in spec.inds){
+      dat.sub2= dat.sub[which(dat.sub$species==specs[spec.ind]),]
+  
+      p= fitG(dat.sub2$ordinal, dat.sub2$DIp, mu=150, sig=20, scale=100 )
+      if(p$convergence==0) fits[spec.ind, year, site, 1:3]= p$par
+      
+      if(spec.ind==1) plot(dat.sub2$ordinal, dat.sub2$DIp, type="p", xlim=range(100,300), ylim=range(0,100), col= colors[spec.ind])
+      if(spec.ind>1) points(dat.sub2$ordinal, dat.sub2$DIp, type="p", col= colors[spec.ind])
+      #plot fit
+      lines(dat.sub2$ordinal,p$par[3]*dnorm(dat.sub2$ordinal,p$par[1],p$par[2]), col= colors[spec.ind])
+      
+    }
+  }
+}
+dev.off()
+
+#----------------
+#expand array
+fit.df=as.data.frame.table(fits)
+colnames(fit.df)=c("species","year","site","param","value")
+#make numeric and add elevation
+fit.df$year= as.numeric(as.character(fit.df$year))
+fit.df$elev<- elevs[fit.df$site]
+fit.df= fit.df[!is.na(fit.df$value),]
+fit.df= fit.df[which(fit.df$value>0),]
+
+#add period
+fit.df$period<- "resurvey"
+fit.df$period[which(fit.df$year<1965)]<- "initial"
+
+#add diapause
+fit.df$diapause="egg"
+fit.df$diapause[which(fit.df$species %in% c("Arphia conspersa","Eritettix simplex","Pardalaphoa apiculata","Xanthippus corallipes"))]="nymph"
+
+#add gdds
+fit.df$siteyear= paste(fit.df$site, fit.df$year, sep="")
+dat$siteyear= paste(dat$site, dat$year, sep="")
+
+match1= match(fit.df$siteyear, dat$siteyear)
+fit.df$Cdd_siteave= dat$Cdd_siteave[match1]
+
+#plot
+#mu, sig, scale
+pdf("PhenFits.pdf", height = 20, width = 10)
+ggplot(data=fit.df[which(fit.df$param=="mu"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
+  geom_point(aes(shape=period, fill=period))+facet_grid(species~., scales="free")+geom_smooth(method="lm", se=FALSE)+geom_line()
+dev.off()
+
+#stats
+#mu
+param.mu= fit.df[which(fit.df$param=="mu"),]
+param.mu= param.mu[which(param.mu$value>0),]
+param.mu= na.omit(param.mu)
+
+mod1= lm(value~ species+elev+year, data=param.mu)
+
+#=================================================
+#Calculate overlap metrics
+
 for(year in 1:length(years)){
   for(site in 1:length(sites)){
     

@@ -2,14 +2,24 @@ library(reshape)
 library(reshape2)
 library(tidyr)
 
+#LOAD SPECIES DATA
+setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/data/")
+spec.diapause= read.csv("SpeciesDiapause.csv")
+dat.all= read.csv("HopperClimateData.csv")
+#data currently from phenology file PhenFigs_20May2018.R
+
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/figures/")
 
-#data currently from phenology file PhenFigs_20May2018.R
 #------------------------------------
-dat.all= dat
+#compare egg diapausers vs non
+dat.all$diapause="egg"
+dat.all$species= as.character(dat.all$species)
+dat.all$diapause[which(dat.all$species %in% c("Arphia conspersa","Eritettix simplex","Pardalaphoa apiculata","Xanthippus corallipes"))]="nymph"
 
 #focal species
-specs= c("Aeropedellus clavatus","Camnula pellucida","Melanoplus dawsoni","Melanoplus boulderensis","Melanoplus sanguinipes") #"Chloealtis abdominalis",
+specs= c("Aeropedellus clavatus","Camnula pellucida","Melanoplus dawsoni","Melanoplus boulderensis","Melanoplus sanguinipes","Arphia conspersa","Eritettix simplex","Pardalaphoa apiculata","Xanthippus corallipes") #"Chloealtis abdominalis",
+#subset to focal species
+dat= subset(dat.all, dat.all$species %in% specs)
 
 years= unique(na.omit(hop$year))
 sites= unique(hop$site)
@@ -18,13 +28,12 @@ sites= unique(hop$site)
 sites=c("CHA", "A1", "B1", "C1")
 elevs= c(1752, 2195, 2591, 3048)
 
-#subset ot focal species
-dat= subset(dat, dat$species %in% specs)
-
 #Calculate development index
 dat$DIp=0
 inds=which(dat$total>0)  
 dat$DIp[inds]= (dat$in1[inds] +dat$in2[inds]*2 +dat$in3[inds]*3 +dat$in4[inds]*4 +dat$in5[inds]*5 +dat$in6[inds]*6)/6
+
+dat$spsiteyear= paste(dat$siteyear, dat$species, sep="")
 
 #calculate proportion
 dat.sum= ddply(dat, c("site", "year","species","spsiteyear"), summarise,
@@ -77,10 +86,11 @@ dat$swarm= as.factor(round(dat$Cdd_july_siteave,2))
 
 #plot as proportion of total
 dat$elev.lab= factor(dat$elev.lab, levels=c("1752m","2195m","2591m","3048m"))
+dat$diapause= as.factor(dat$diapause)
 
 pdf("Fig_dipnorm.pdf",height = 11, width = 10)
-ggplot(data=dat, aes(x=ordinal, y = DIpNorm, group=species, color=species))+
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(swarm~elev.lab, scales="free")+ylim(0,0.2)+
+ggplot(data=dat, aes(x=ordinal, y = DIpNorm, group=species, color=species, lty=diapause))+
+  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(year~elev.lab, scales="free")+ylim(0,0.2)+
   ylab("Proportional abundance")+xlab("Day of year")+ theme(legend.position="bottom")+
   guides(color=guide_legend(nrow=2,byrow=TRUE))
 dev.off()
