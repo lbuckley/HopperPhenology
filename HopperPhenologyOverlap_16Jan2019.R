@@ -121,6 +121,7 @@ ggplot(data=dat, aes(x=ordinal, y = DIpNorm, group=spsiteyear, color=Cdd_siteave
   theme(strip.text.y = element_text(angle = 0))
 dev.off()
 
+## FIGURE 1
 #No normalization
 pdf("Fig_distyear_byspec.pdf",height = 20, width = 10)
 ggplot(data=dat, aes(x=ordinal, y = DIp, group=spsiteyear, color=Cdd_siteave, lty=diapause))+
@@ -204,14 +205,25 @@ dat$siteyear= paste(dat$site, dat$year, sep="")
 match1= match(fit.df$siteyear, dat$siteyear)
 fit.df$Cdd_siteave= dat$Cdd_siteave[match1]
 
+#add seasonal timing (calculated below)
+fit.df$timing= timing.mat$timing[match(fit.df$species, rownames(timing.mat))]
+#drop species without timing
+fit.df= fit.df[which(!is.na(fit.df$timing)),]
+
+#order species by timing
+fit.df$species= factor(fit.df$species, levels=row.names(timing.mat) )
+
 #plot
 #mu, sig, scale
 plot.mu= ggplot(data=fit.df[which(fit.df$param=="mu"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
-  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_smooth(method="lm", se=FALSE)+geom_line()
+  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_line()
+
 plot.sig= ggplot(data=fit.df[which(fit.df$param=="sig"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
-  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_smooth(method="lm", se=FALSE)+geom_line()
+  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_line()
+
 plot.scale= ggplot(data=fit.df[which(fit.df$param=="scale"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
-  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_smooth(method="lm", se=FALSE)+geom_line()
+  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_line()
+#+geom_smooth(method="lm", se=FALSE)
 
 pdf("PhenFits.pdf", height = 20, width = 20)
 plot_grid(plot.mu, plot.sig, plot.scale, nrow=1)
@@ -223,9 +235,9 @@ dev.off()
 param.mu= fit.df[which(fit.df$param=="mu"),]
 param.mu= na.omit(param.mu)
 
-#mod1= lm(value~ species+elev+year, data=param.mu)
-mod1= lm(value~ species*elev*Cdd_siteave, data=param.mu)
-anova(mod1)
+#lme model
+mod1=lme(value~ Cdd_siteave +elev + timing+  Cdd_siteave:elev + Cdd_siteave:timing, random=~1|species, data=param.mu )
+summary(mod1)
 
 #by species
 spec.ind= 2
@@ -421,6 +433,13 @@ hop.agg= hop.agg[order(hop.agg$ordinal),]
 po1$sp1= factor(po1$sp1, levels=specs)
 po1$sp2= factor(po1$sp2, levels=specs)
 
+#add seasonal timing (calculated below)
+po1$sp1_timing= timing.mat$timing[match(po1$sp1, rownames(timing.mat))]
+po1$sp2_timing= timing.mat$timing[match(po1$sp2, rownames(timing.mat))]
+#drop species without timing
+po1= po1[which(!is.na(po1$sp1_timing)),]
+po1= po1[which(!is.na(po1$sp2_timing)),]
+
 #PLOT
 #add elevation
 po1$elevation= as.factor(elevs[match(po1$site, sites)])
@@ -440,10 +459,14 @@ po1$elevation= as.factor(elevs[match(po1$site, sites)])
 po1$elevspec= paste(po1$elevation, po1$sp, sep="")
 elevspec= matrix(unique(po1$elevspec))
 
+#add average year CDD
+fit.df$siteyear= paste(fit.df$site, fit.df$year, sep="")
+po1$Cdd_siteave = fit.df[match(po1$siteyear, fit.df$siteyear),"Cdd_siteave"]
+
 #---
 #EXTRACT COEFFS
-po2= po1[which(po1$metric==3),] #3,7
-x1="cdd_july"
+po2= po1[which(po1$metric==2),] #3,7
+x1="cdd" # "Cdd_siteave", "cdd", "cdd_july"
 #x1="year"
 #x1="Tmean"
 
@@ -469,6 +492,7 @@ p.mat$sig.gdd[which(p.gdd[4,]<0.05)]="significant"
 #add back to matrix
 match1= match(po2$elevspec, elevspec)
 po2$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","nonsignificant"))
+
 #---
 
 #PLOTS
@@ -478,13 +502,29 @@ po2$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","nonsignific
 #  facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE, aes(linetype=sig.gdd))+ 
 #  scale_color_manual(values=c("darkorange", "blue","darkgreen","purple"))#+xlim(200,750)
 
+#drop if less than 5 years 
+po2.counts= ddply(po2, c("site", "sp","elevation","elevspec"), summarise, count=length(unique(year)) )
+po2.keep= po2.counts[which(po2.counts$count>3),]
+po2= po2[which(po2$elevspec %in% unique(po2.keep$elevspec)),]
+
+#order species by timing
+po2$sp1= factor(po2$sp1, levels=row.names(timing.mat) )
+
 #plot by elevation
-pdf("PhenOverlap_byGDD_days.pdf", height = 20, width = 20)
-ggplot(data=po2, aes_string(x=x1, y = "value", color="sp2"))+geom_point(aes(shape=period, fill=period), size=2)+
-  facet_grid(sp1~elevation, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE, aes(linetype=sig.gdd))
+pdf("PhenOverlap_byGDD_days.pdf", height = 10, width = 10)
+ggplot(data=po2, aes_string(x=x1, y = "value", group="sp2", color="sp2_timing"))+geom_point(aes(shape=period, fill=period), size=2)+
+  facet_grid(sp1~elevation, drop=TRUE, scales="free_x")+theme_bw()+geom_smooth(method="lm", se=FALSE)+
+  theme(strip.text.y = element_text(angle = 0)) #, aes(linetype=sig.gdd)
 dev.off()
 
 #+ylab("Phenological overlap (days)")+xlab("Growing degree days")
+
+#------
+#STATS ACROSS SPECIES #*****
+po2$elevation= as.numeric(po2$elevation)
+
+mod1=lme(value~ cdd + cdd:elevation + cdd:sp1_timing +cdd:sp2_timing+ cdd:sp1_timing:elevation +cdd:sp2_timing:elevation, random=~1|sp, data=po2)
+summary(mod1)
 
 #-------------
 #STATS
@@ -504,7 +544,7 @@ po2.sp= na.omit(po2.sp[which(!is.na(po2.sp)),] )
 #make elevation numeric
 po2.sp$elevation= as.numeric(as.character(po2.sp$elevation))
 
-mod1=lme(value~ cdd_july + elevation + timing, random=~1|sp2, data=po2.sp)
+mod1=lme(value~ cdd + elevation + timing, random=~1|sp2, data=po2.sp)
 print(po2.sp$sp1[1] )
 summary(mod1)
 
@@ -550,8 +590,19 @@ overlaps.sp[sp.k,]= tryCatch( summary(lme(value~ cdd_july+cdd_july:elevation+cdd
 #======================
 #Average overlap across community
 
+#drop species combin ations with less that 4 years
+po1.counts= ddply(po1, c("site", "sp","elevation","elevspec","metric"), summarise, count=length(unique(year)) )
+po1.keep= po1.counts[which(po1.counts$count>3),]
+po1.keep$elevspecmetric= paste(po1.keep$elevspec, po1.keep$metric , sep="")
+po1$elevspecmetric= paste(po1$elevspec, po1$metric , sep="")
+
+po1= po1[which(po1$elevspecmetric %in% unique(po1.keep$elevspecmetric)),]
+
+
+#-----------
+
 po.comm= ddply(po1, c("site", "year","metric","period","siteyear"), summarise,
-               value = mean(value, na.rm=TRUE), Tmean= Tmean[1], cdd=cdd[1],cdd_july=cdd_july[1],elevation=elevation[1])
+               value = mean(value, na.rm=TRUE), Tmean= Tmean[1], cdd=cdd[1],cdd_july=cdd_july[1],elevation=elevation[1], Cdd_siteave= Cdd_siteave[1])
 
 ggplot(data=po.comm[which(po.comm$metric==1),], aes(x=year, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
   theme_bw()+geom_smooth(method="lm", se=FALSE)
@@ -570,13 +621,17 @@ plot.m8= ggplot(data=po.comm[which(po.comm$metric==8),], aes(x=cdd, y = value, c
 plot.m9= ggplot(data=po.comm[which(po.comm$metric==9),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
   theme_bw()+geom_smooth(method="lm", se=FALSE)+labs(title="days diff in peak")
 
+#focus on 2,7,9?
+
 pdf("CommOverlap.pdf", height = 10, width = 10)
-plot_grid(plot.m1, plot.m2, plot.m3,plot.m7, plot.m8, plot.m9, nrow=3)
+plot_grid(plot.m1,plot.m2, plot.m3, plot.m7, plot.m8, plot.m9, nrow=3)
 dev.off()
+#vack to site specific values?
 
 #----
 #analyze
 po.comm$elevation= as.numeric(as.character(po.comm$elevation))
 
-mod1= lm(value~ cdd + cdd*elevation + cdd*period, data=po.comm[which(po.comm$metric==7),])
+mod1= lm(value~ cdd+ cdd*elevation, data=po.comm[which(po.comm$metric==2),])
+mod1= lm(value~ cdd+ cdd*elevation, data=po.comm[which(po.comm$metric==7),])
 summary(mod1)
