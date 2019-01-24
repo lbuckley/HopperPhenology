@@ -1,6 +1,9 @@
 library(reshape)
 library(reshape2)
 library(tidyr)
+library(cowplot)
+require(nlme)
+require(lme4)
 
 #LOAD SPECIES DATA
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/data/")
@@ -21,6 +24,8 @@ dat.all$species[which(dat.all$species=="Melanoplus bivatattus")]="Melanoplus biv
 
 #focal species
 specs= c("Aeropedellus clavatus","Camnula pellucida","Melanoplus dawsoni","Melanoplus boulderensis","Melanoplus sanguinipes","Arphia conspersa","Eritettix simplex","Pardalaphoa apiculata","Xanthippus corallipes") #"Chloealtis abdominalis",
+specs= unique(dat.all$species)
+
 #subset to focal species
 ##dat= subset(dat.all, dat.all$species %in% specs)
 #keep all species
@@ -136,7 +141,7 @@ fitG =
       sum((d-y)^2)
     }
     
-    optim(c(mu,sig,scale),f)
+    optim(c(mu,sig,scale),f, method="L-BFGS-B", lower=c(100,20,50), upper=c(300,200,5000) )
   }
 #fit= fitG(temp,y,mu=200, sig=1, scale=1)
 
@@ -148,24 +153,27 @@ colors= rainbow(9)
 pdf("Fits.pdf", height = 10, width = 10)
 par(mfrow=c(5,5))
 
-for(year in 1:length(years)){
-  for(site in 1:length(sites)){
-    
-    dat.sub= dat[which(dat$year==years[year] & dat$site==sites[site] ),]
-
-    spec.inds= which(specs %in% dat.sub$species )
-    
-    for(spec.ind in spec.inds){
-      dat.sub2= dat.sub[which(dat.sub$species==specs[spec.ind]),]
+for(site in 1:length(sites)){
+  dat.sub= dat[which(dat$site==sites[site] ),]
   
-      p= fitG(dat.sub2$ordinal, dat.sub2$DIp, mu=150, sig=20, scale=100 )
-      if(p$convergence==0) fits[spec.ind, year, site, 1:3]= p$par
+  spec.inds= which(specs %in% dat.sub$species )
+  year.inds= which(years %in% dat.sub$year )
+  
+  for(spec.ind in spec.inds){
+
+  for(year.ind in year.inds){
+  
+      dat.sub2= dat.sub[which(dat.sub$species==specs[spec.ind] & dat.sub$year==years[year.ind]),]
+  
+      if(nrow(dat.sub2)>5){
+      p= fitG(dat.sub2$ordinal, dat.sub2$DIp, mu=150, sig=50, scale=100 )
+      if(p$convergence==0) fits[spec.ind, year.ind, site, 1:3]= p$par
       
-      if(spec.ind==1) plot(dat.sub2$ordinal, dat.sub2$DIp, type="p", xlim=range(100,300), ylim=range(0,100), col= colors[spec.ind])
-      if(spec.ind>1) points(dat.sub2$ordinal, dat.sub2$DIp, type="p", col= colors[spec.ind])
+      if(year.ind==1) plot(dat.sub2$ordinal, dat.sub2$DIp, type="p", xlim=range(100,300), ylim=range(0,100), col= colors[year.ind], main= paste(sites[site],specs[spec.ind],sep=" ") )
+      if(year.ind>1) points(dat.sub2$ordinal, dat.sub2$DIp, type="p", col= colors[year.ind])
       #plot fit
-      lines(dat.sub2$ordinal,p$par[3]*dnorm(dat.sub2$ordinal,p$par[1],p$par[2]), col= colors[spec.ind])
-      
+      lines(dat.sub2$ordinal,p$par[3]*dnorm(dat.sub2$ordinal,p$par[1],p$par[2]), col= colors[year.ind])
+      }
     }
   }
 }
@@ -198,18 +206,33 @@ fit.df$Cdd_siteave= dat$Cdd_siteave[match1]
 
 #plot
 #mu, sig, scale
-pdf("PhenFits.pdf", height = 20, width = 10)
-ggplot(data=fit.df[which(fit.df$param=="mu"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
-  geom_point(aes(shape=period, fill=period))+facet_grid(species~., scales="free")+geom_smooth(method="lm", se=FALSE)+geom_line()
+plot.mu= ggplot(data=fit.df[which(fit.df$param=="mu"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
+  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_smooth(method="lm", se=FALSE)+geom_line()
+plot.sig= ggplot(data=fit.df[which(fit.df$param=="sig"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
+  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_smooth(method="lm", se=FALSE)+geom_line()
+plot.scale= ggplot(data=fit.df[which(fit.df$param=="scale"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
+  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_smooth(method="lm", se=FALSE)+geom_line()
+
+pdf("PhenFits.pdf", height = 20, width = 20)
+plot_grid(plot.mu, plot.sig, plot.scale, nrow=1)
 dev.off()
 
+#---------------------
 #stats
-#mu
+#mu, sig, scale
 param.mu= fit.df[which(fit.df$param=="mu"),]
-param.mu= param.mu[which(param.mu$value>0),]
 param.mu= na.omit(param.mu)
 
-mod1= lm(value~ species+elev+year, data=param.mu)
+#mod1= lm(value~ species+elev+year, data=param.mu)
+mod1= lm(value~ species*elev*Cdd_siteave, data=param.mu)
+anova(mod1)
+
+#by species
+spec.ind= 2
+param.mu= param.mu[which(param.mu$species==specs[spec.ind]),]
+
+mod1= lm(value~ elev*Cdd_siteave, data=param.mu)
+anova(mod1)
 
 #=================================================
 #Calculate overlap metrics
@@ -393,8 +416,10 @@ hop.agg= hop.agg[order(hop.agg$ordinal),]
 #make species factor for plotting
 #po1$sp1= factor(po1$sp1, levels=hop.agg$Group.1)
 #po1$sp2= factor(po1$sp2, levels=hop.agg$Group.1)
-po1$sp1= factor(po1$sp1, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes", "Melanoplus dawsoni", "Chloealtis abdominalis"))
-po1$sp2= factor(po1$sp2, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes", "Melanoplus dawsoni", "Chloealtis abdominalis"))
+#po1$sp1= factor(po1$sp1, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes", "Melanoplus dawsoni", "Chloealtis abdominalis"))
+#po1$sp2= factor(po1$sp2, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes", "Melanoplus dawsoni", "Chloealtis abdominalis"))
+po1$sp1= factor(po1$sp1, levels=specs)
+po1$sp2= factor(po1$sp2, levels=specs)
 
 #PLOT
 #add elevation
@@ -417,15 +442,19 @@ elevspec= matrix(unique(po1$elevspec))
 
 #---
 #EXTRACT COEFFS
-po2= po1[which(po1$metric==7),] #3,7
+po2= po1[which(po1$metric==3),] #3,7
 x1="cdd_july"
 #x1="year"
 #x1="Tmean"
 
-p.gdd= apply(elevspec,1, FUN=function(x) summary(lm(value~get(x1), data=po2[which(po2$elevation==substr(x,1,4)& po2$sp==substr(x,5,nchar(x)) ),] ))$coefficients[2,])
+po2$elevation= as.character(po2$elevation)
+
+p.gdd= apply(elevspec,1, FUN=function(x) tryCatch( summary(lm(value~get(x1), data=po2[which(po2$elevation==substr(x,1,4)& po2$sp==substr(x,5,nchar(x)) ),] ))$coefficients[2,], error=function(err) rep(NA,4)))
 
 #combine
 p.mat=as.data.frame(cbind(elevspec,t(p.gdd) ))
+colnames(p.mat)[2:5]= c("Estimate","Std. Error","t value","Pr(>|t|)") 
+
 #make numeric
 p.mat$Estimate= as.numeric(as.character(p.mat$Estimate))
 p.mat$`Std. Error`= as.numeric(as.character(p.mat$`Std. Error`))
@@ -442,31 +471,42 @@ match1= match(po2$elevspec, elevspec)
 po2$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","nonsignificant"))
 #---
 
-pdf("PhenOverlap_byGDD_days.pdf", height = 8, width = 10)
-ggplot(data=po2, aes_string(x=x1, y = "value", color="elevation"))+geom_point(aes(shape=period, fill=period), size=2)+
-  facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE, aes(linetype=sig.gdd))+ 
-  scale_color_manual(values=c("darkorange", "blue","darkgreen","purple"))#+xlim(200,750)
+#PLOTS
+
+#Full grids
+#ggplot(data=po2, aes_string(x=x1, y = "value", color="elevation"))+geom_point(aes(shape=period, fill=period), size=2)+
+#  facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE, aes(linetype=sig.gdd))+ 
+#  scale_color_manual(values=c("darkorange", "blue","darkgreen","purple"))#+xlim(200,750)
+
+#plot by elevation
+pdf("PhenOverlap_byGDD_days.pdf", height = 20, width = 20)
+ggplot(data=po2, aes_string(x=x1, y = "value", color="sp2"))+geom_point(aes(shape=period, fill=period), size=2)+
+  facet_grid(sp1~elevation, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE, aes(linetype=sig.gdd))
 dev.off()
 
 #+ylab("Phenological overlap (days)")+xlab("Growing degree days")
 
-#**********************************************
+#-------------
+#STATS
 
-# #overlap by GDD by site
-# pdf("PhenOverlap_byGDD_site.pdf", height = 8, width = 10)
-# ggplot(data=po1[which(po1$metric==1),], aes(x=cdd, y = value, color=sp))+geom_point(aes(shape=period, fill=period), size=2)+
-#   facet_wrap(~site, drop=TRUE, scales="free")+theme_bw()+geom_smooth(method="lm", se=FALSE)+ylab("Phenological overlap")+xlab("Growing degree days")+ 
-#   scale_color_manual(values=rainbow(20))+ylim(0,1)
-# dev.off()
+#early vs late species
+fits1= fits[,,2,1]
+fits1= sort(rowMeans(fits1, na.rm=TRUE))
+timing.mat= as.data.frame( cbind(colnames(fits1), fits1) )
+timing.mat$timing= c(rep(1,3),rep(2,2),rep(3,9) )
 
-#--------------
-#Average overlap across community
+#pick species
+po2.sp= po2[which(po2$sp1==rownames(timing.mat)[7]),]
+po2.sp$timing= timing.mat$timing[match(po2.sp$sp2, rownames(timing.mat))]
+#drop species without timing
+po2.sp= na.omit(po2.sp[which(!is.na(po2.sp)),] )
 
-po.comm= ddply(po1, c("site", "year","metric","period","siteyear"), summarise,
-               value = mean(value, na.rm=TRUE), Tmean= Tmean[1], cdd=cdd[1],cdd_july=cdd_july[1],elevation=elevation[1])
-                 
-ggplot(data=po.comm[which(po.comm$metric==1),], aes(x=year, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
-  theme_bw()+geom_smooth(method="lm", se=FALSE)
+#make elevation numeric
+po2.sp$elevation= as.numeric(as.character(po2.sp$elevation))
+
+mod1=lme(value~ cdd_july + elevation + timing, random=~1|sp2, data=po2.sp)
+print(po2.sp$sp1[1] )
+summary(mod1)
 
 #===================================
 # STATS GROUP BY SPECIES
@@ -476,8 +516,14 @@ mod1= lm(value~ cdd*elevation+sp2+sp1, data=po2)
 mod1= lm(value~ cdd*as.numeric(as.character(elevation))+sp, data=po2)
 
 #---------------
+#save output in table
+
+overlaps.sp= matrix(NA, nrow=length(specs), ncol=3 )
+rownames(overlaps.sp)= specs
+
 #by focal species
-sp.k=5
+
+for(sp.k in 1:length(specs)){
 po3= subset(po2, po2$sp1==specs[sp.k] ) #subset(po2, po2$sp1==specs[sp.k] | po2$sp2==specs[sp.k])
 # #switch species order
 # p.temp= po3$sp1
@@ -487,22 +533,50 @@ po3= subset(po2, po2$sp1==specs[sp.k] ) #subset(po2, po2$sp1==specs[sp.k] | po2$
 #  po3$sp2[inds]=po3$sp1[inds] 
 # }
 
+if(nrow(po3)>0) {
+
 po3$elevation= as.numeric(as.character(po3$elevation))
-mod1= lm(value~ cdd_july+cdd_july:elevation+cdd_july:sp2, data=po3)
-specs[sp.k]
-summary(mod1)
 
 #---------------
 #early vs late
-require(nlme)
-require(lme4)
-
-po3$timing="early"
+po3$timing<-"early"
 po3$timing[which(po3$sp2 %in% specs[c(1,4)])]<-"late"
 
-#mod1= lme(value~ cdd_july+cdd_july:elevation,random=~1|sp2 , data=po3)
-mod1= lme(value~ cdd_july+cdd_july:elevation+cdd_july:timing,random=~1|sp2 , data=po3)
+overlaps.sp[sp.k,]= tryCatch( summary(lme(value~ cdd_july+cdd_july:elevation+cdd_july:timing,random=~1|sp2 , data=po3))$tTable[2:4,5], error=function(err) rep(NA,3))
+#mod1= lme(value~ cdd_july+elevation+timing+cdd_july:elevation+cdd_july:timing,random=~1|sp2 , data=po3)
+}
+}
+
+#======================
+#Average overlap across community
+
+po.comm= ddply(po1, c("site", "year","metric","period","siteyear"), summarise,
+               value = mean(value, na.rm=TRUE), Tmean= Tmean[1], cdd=cdd[1],cdd_july=cdd_july[1],elevation=elevation[1])
+
+ggplot(data=po.comm[which(po.comm$metric==1),], aes(x=year, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
+  theme_bw()+geom_smooth(method="lm", se=FALSE)
+
+#all metrics
+plot.m1= ggplot(data=po.comm[which(po.comm$metric==1),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
+  theme_bw()+geom_smooth(method="lm", se=FALSE)+labs(title="Pianka index")
+plot.m2= ggplot(data=po.comm[which(po.comm$metric==2),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
+  theme_bw()+geom_smooth(method="lm", se=FALSE)+labs(title="overlap area, norm to 1")
+plot.m3= ggplot(data=po.comm[which(po.comm$metric==3),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
+  theme_bw()+geom_smooth(method="lm", se=FALSE)+labs(title="overlap area, norm to area focal")
+plot.m7= ggplot(data=po.comm[which(po.comm$metric==7),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
+  theme_bw()+geom_smooth(method="lm", se=FALSE)+labs(title="day overlap")
+plot.m8= ggplot(data=po.comm[which(po.comm$metric==8),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
+  theme_bw()+geom_smooth(method="lm", se=FALSE)+labs(title="days overlap, norm")
+plot.m9= ggplot(data=po.comm[which(po.comm$metric==9),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
+  theme_bw()+geom_smooth(method="lm", se=FALSE)+labs(title="days diff in peak")
+
+pdf("CommOverlap.pdf", height = 10, width = 10)
+plot_grid(plot.m1, plot.m2, plot.m3,plot.m7, plot.m8, plot.m9, nrow=3)
+dev.off()
+
+#----
+#analyze
+po.comm$elevation= as.numeric(as.character(po.comm$elevation))
+
+mod1= lm(value~ cdd + cdd*elevation + cdd*period, data=po.comm[which(po.comm$metric==7),])
 summary(mod1)
-#--------------------------------
-
-
