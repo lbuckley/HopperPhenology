@@ -253,11 +253,11 @@ dat$doy_adult= dout[match(dat$spsiteyear, dout$spsiteyear),"doy_adult"]
 dat$gdd_adult= dout[match(dat$spsiteyear, dout$spsiteyear),"gdd_adult"]
 
 #==============================================
-#WRITE SPECIES DATA
+#WRITE SPECIES AND CLIMATE DATA
 
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/data/")
 write.csv(dat, "HopperClimateData.csv")
-
+write.csv(clim1, "Clim1Data.csv")
 #==============================================
 
 
