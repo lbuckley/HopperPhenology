@@ -11,7 +11,7 @@ setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/data/")
 spec.diapause= read.csv("SpeciesDiapause.csv")
 dat.all= read.csv("HopperClimateData.csv")
 #data currently from phenology file PhenFigs_20May2018.R
-timing.mat= read.csv(timing.mat, "timingmat.csv" )
+timing.mat= read.csv("timingmat.csv" )
 #climate data
 clim1= read.csv("Clim1Data.csv")
 
@@ -232,6 +232,9 @@ fit.df= fit.df[which(!is.na(fit.df$timing)),]
 #order species by timing
 fit.df$species= factor(fit.df$species, levels=row.names(timing.mat) )
 
+#add elevation label
+fit.df$elev.lab= paste(fit.df$elev, "m", sep="")
+
 #plot
 #mu, sig, scale
 plot.mu= ggplot(data=fit.df[which(fit.df$param=="mu"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
@@ -250,13 +253,11 @@ scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
   labs(color = "Elevation")+theme(strip.background = element_blank(),
                                   strip.text.y = element_blank(),strip.text.x = element_blank())
 
-plot.scale= ggplot(data=fit.df[which(fit.df$param=="scale"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
-  geom_point(aes(shape=period, fill=period, color=as.factor(elev) ))+facet_grid(species~param, scales="free")+geom_line()+ theme(legend.position="right")+
+plot.scale= ggplot(data=fit.df[which(fit.df$param=="scale"),], aes(x=Cdd_siteave, y = value, group=elev.lab, color=elev.lab))+
+  geom_point(aes(shape=period, fill=period, color=elev.lab ))+facet_grid(species~param, scales="free")+geom_line()+ theme(legend.position="right")+
   xlab("")+ylab("scale of abundance distribution")+
-scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
-                   values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +theme(strip.text.x = element_blank())+
-  theme(strip.text.y = element_text(angle = 0),strip.text = element_text(face = "italic")) +labs(color = "Elevation")
-## FIX ELEVATION LEGEND
+  theme(strip.text.y = element_text(angle = 0),strip.text = element_text(face = "italic")) +labs(color = "elevation")+theme(strip.text.x = element_blank())+ 
+  scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"), values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) 
 
 pdf("Fig2_PhenFits.pdf", height = 20, width = 12)
 plot_grid(plot.mu, plot.sig, plot.scale, nrow=1, rel_widths=c(1,1,2) )
