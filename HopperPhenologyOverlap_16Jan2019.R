@@ -138,7 +138,11 @@ dev.off()
 pdf("Fig1_distyear_byspec.pdf",height = 12, width = 12)
 ggplot(data=dat, aes(x=ordinal, y = DIp, group=spsiteyear, color=Cdd_siteave))+ #, lty=diapause
   geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(species~elev.lab, scales="free")+
-  theme(strip.text.y = element_text(angle = 0))+ theme(legend.position="bottom", legend.key.width=unit(3,"cm"))
+  theme(strip.text.y = element_text(angle = 0))+ theme(legend.position="bottom", legend.key.width=unit(3,"cm"))+
+  scale_color_gradientn(colours = c('blue', 'cadetblue', 'orange')  ) +
+  xlab("ordinal date") +ylab("abundance")+ 
+  theme(strip.text = element_text(face = "italic")) +
+  labs(color = "seasonal GDDs")
 dev.off()
 
 #========================================
@@ -231,24 +235,41 @@ fit.df$species= factor(fit.df$species, levels=row.names(timing.mat) )
 #plot
 #mu, sig, scale
 plot.mu= ggplot(data=fit.df[which(fit.df$param=="mu"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
-  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_line()+ theme(legend.position="none")
+  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_line()+ theme(legend.position="none")+
+  xlab("")+ylab("peak of abundance distribution")+
+scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
+                   values=c("darkorange3", "darkorange", "cornflowerblue","blue3"))+
+  labs(color = "Elevation")+theme(strip.background = element_blank(),
+                                  strip.text.y = element_blank(),strip.text.x = element_blank())
 
 plot.sig= ggplot(data=fit.df[which(fit.df$param=="sig"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
-  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_line()+ theme(legend.position="none")
+  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_line()+ theme(legend.position="none")+
+  xlab("seasonal growing degree days")+ylab("breadth of abundance distribution")+
+scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
+                   values=c("darkorange3", "darkorange", "cornflowerblue","blue3"))+
+  labs(color = "Elevation")+theme(strip.background = element_blank(),
+                                  strip.text.y = element_blank(),strip.text.x = element_blank())
 
 plot.scale= ggplot(data=fit.df[which(fit.df$param=="scale"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
-  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_line()+ theme(legend.position="right")
-#+geom_smooth(method="lm", se=FALSE)
+  geom_point(aes(shape=period, fill=period, color=as.factor(elev) ))+facet_grid(species~param, scales="free")+geom_line()+ theme(legend.position="right")+
+  xlab("")+ylab("scale of abundance distribution")+
+scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
+                   values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +theme(strip.text.x = element_blank())+
+  theme(strip.text.y = element_text(angle = 0),strip.text = element_text(face = "italic")) +labs(color = "Elevation")
+## FIX ELEVATION LEGEND
 
 pdf("Fig2_PhenFits.pdf", height = 20, width = 12)
-plot_grid(plot.mu, plot.sig, plot.scale, nrow=1, rel_widths=c(1,1,1.3) )
+plot_grid(plot.mu, plot.sig, plot.scale, nrow=1, rel_widths=c(1,1,2) )
 dev.off()
 
 #---------------------
 #stats
 #mu, sig, scale
-param.mu= fit.df[which(fit.df$param=="scale"),] 
+param.mu= fit.df[which(fit.df$param=="mu"),] 
 param.mu= na.omit(param.mu)
+
+#omit nymphal diapausers
+param.mu= na.omit(param.mu[which(param.mu$timing!=1),])
 
 #STATS ****
 #lme model
@@ -264,6 +285,21 @@ dredge(mod1)
 
 mod1= lme(value~ cdd_seas+timing, random=~1|species, data=param.mu )
 summary(mod1)
+
+#----
+#just 2195 elev
+#mu, sig, scale
+param.mu= fit.df[which(fit.df$param=="scale"),] 
+param.mu= na.omit(param.mu)
+
+#omit nymphal diapausers
+param.mu= na.omit(param.mu[which(param.mu$elev==2195),])
+
+#STATS ****
+#lme model
+mod1=lme(value~ cdd_seas + cdd_seas:timing, random=~1|species, data=param.mu )
+summary(mod1)
+anova(mod1)
 
 #---
 #early season species
@@ -283,10 +319,8 @@ param.mu= fit.df[which(fit.df$param=="mu"),] #"mu","sig","scale"
 param.mu= na.omit(param.mu)
 
 #by species
-param.mu= fit.df[which(fit.df$param=="mu"),] #"mu","sig","scale"
-param.mu= na.omit(param.mu)
-spec.ind= 3
-param.mu= param.mu[which(param.mu$species==specs[spec.ind]),]
+#spec.ind= 3
+#param.mu= param.mu[which(param.mu$species==specs[spec.ind]),]
 
 mod1= lm(value~ cdd_seas +cdd_seas:elev, data=param.mu )
 anova(mod1)
@@ -725,6 +759,8 @@ anova(mod1)
 #single elevation
 mod1= lm(value~ cdd, data=po.comm[which(po.comm$metric==9 & po.comm$elevation==3048),])
 
-
+#library(faraway)
+prplot(mod1,1)
+prplot(mod1,2)
 
 
