@@ -9,14 +9,13 @@ sites= c("CHA", "A1", "B1", "C1", "D1")  #Redfox: 1574
 elevs= c(1752, 2195, 2591, 3048, 3739)
 
 #source degree days function
-setwd("C:\\Users\\Buckley\\Documents\\HopperPhenology\\")
 source("degreedays.R")
 
 #======================================================
 #READ DATA
 
-fdir= "C:\\Users\\Buckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
 #fdir= "C:\\Users\\lbuckley\\Google Drive\\AlexanderResurvey\\DataForAnalysis\\"
+fdir= "/Volumes/GoogleDrive/My Drive/AlexanderResurvey/DataForAnalysis/"
 
 #load climate data
 setwd( paste(fdir, "climate", sep="") )   
@@ -28,7 +27,7 @@ clim= read.csv("AlexanderClimateAll_filled.csv")
 clim = clim %>% group_by(Year,Site) %>% arrange(Julian) %>% mutate(cdd_sum = cumsum(dd_sum),cdd_june = cumsum(dd_june),cdd_july = cumsum(dd_july),cdd_aug = cumsum(dd_aug),cdd_early = cumsum(dd_early),cdd_mid = cumsum(dd_mid),cdd_ac = cumsum(dd_ac),cdd_mb = cumsum(dd_mb),cdd_ms = cumsum(dd_ms) ) 
 
 #load hopper data
-setwd( paste(fdir, "grasshoppers\\SexCombined\\", sep="") )
+setwd( paste(fdir, "grasshoppers/SexCombined/", sep="") )
 hop= read.csv("HopperData.csv")
 
 #------------------------------------
@@ -192,8 +191,13 @@ po3$sp= gsub("Aeropedellus", "A.", po3$sp)
 po3$sp= gsub("Camnula", "C.", po3$sp)
 po3$sp= as.factor(po3$sp)
 
+sp.col<-c("yellow",  "#fecc5c", "#fd8d3c","#e31a1c") 
+po3$sp= factor(po3$sp, levels=c("A. clavatus","M. boulderensis","C. pellucida", "M. sanguinipes"), ordered=TRUE)
+
 #plot
-PopPhenOverlap=ggplot(data=po3, aes(x=elevation, y = value, color=sp, group=site_year_sp))+geom_line(size=1)+theme_bw()+ylab("Overlap")+xlab("Elevation (m)")+ theme(legend.position = 'right')+ labs(color="Species")  #linetype=year, 
+PopPhenOverlap=ggplot(data=po3, aes(x=elevation, y = value, color=sp, group=site_year_sp))+geom_line(size=1)+theme_bw()+
+  ylab("Overlap")+xlab("Elevation (m)")+ theme(legend.position = c(0.15,0.85))+ labs(color="Species")+
+  scale_colour_manual(values = sp.col)  
 
 #----------------
 #STATS
@@ -268,7 +272,15 @@ hop5$species= gsub("Aeropedellus", "A.", hop5$species)
 hop5$species= gsub("Camnula", "C.", hop5$species)
 hop5$species= as.factor(hop5$species)
 
-doyq.plot= ggplot(data=hop5, aes(x=elev, y = ordinal, color=year, linetype=quantile, group=yr_q))+facet_wrap(~species, nrow=2)+theme_bw()+ylab("Day of Year")+geom_line(lwd=1)+xlab("Elevation (m)")
+yr.col<-c(brewer.pal(9, "Greens"), "forestgreen")
+
+hop5$year= as.numeric(as.character(hop5$year))
+doyq.plot= ggplot(data=hop5, aes(x=elev, y = ordinal, color=year, linetype=quantile, group=yr_q))+facet_wrap(~species, nrow=2)+theme_bw()+ylab("Day of Year")+geom_line(lwd=1)+xlab("Elevation (m)")+
+  scale_colour_gradient(low="azure2" , high="forestgreen")
+
+hop5$year= as.factor(as.character(hop5$year))
+doyq.plot= ggplot(data=hop5, aes(x=elev, y = ordinal, color=year, linetype=quantile, group=yr_q))+facet_wrap(~species, nrow=2)+theme_bw()+ylab("Day of Year")+geom_line(lwd=1)+xlab("Elevation (m)")+
+  scale_colour_manual(values=topo.colors(10) )
 
 #----------------------
 #STATS
@@ -293,9 +305,9 @@ ggplot(data=seas, aes(x=elev, y = last, color=year, group=year))+facet_wrap(~spe
 
 lay <- matrix(c(1,2),ncol=2)
 
-setwd("C:\\Users\\Buckley\\Google Drive\\Buckley\\Work\\GrasshopperGenetics\\figures\\")
+setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperGenetics/figures/")
 pdf("phenlogy_plot.pdf", height = 8, width = 10)
-grid.arrange(PopPhenOverlap, doyq.plot,layout_matrix=lay, widths = c(0.7,1))
+grid.arrange(PopPhenOverlap, doyq.plot,layout_matrix=lay, widths = c(0.6,1))
 dev.off()
 
 
