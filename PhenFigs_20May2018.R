@@ -207,6 +207,13 @@ dat$elev= factor(dat$elev, levels=c(3048,2591,2195,1752) )
 #species
 dat$species= factor(dat$species, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Chloealtis abdominalis", "Camnula pellucida", "Melanoplus sanguinipes", "Melanoplus dawsoni") )
 
+#add wind length
+dat$species.lab= paste(dat$species,"(SW)", sep=" ")
+#fix long wing
+dat$species.lab= replace(dat$species.lab, which(dat$species.lab=="Camnula pellucida (SW)"), "Camnula pellucida (LW)")
+dat$species.lab= replace(dat$species.lab, which(dat$species.lab=="Melanoplus sanguinipes (SW)"), "Melanoplus sanguinipes (LW)")
+dat$species.lab= factor(dat$species.lab, levels=c("Aeropedellus clavatus (SW)","Melanoplus boulderensis (SW)","Chloealtis abdominalis (SW)", "Camnula pellucida (LW)", "Melanoplus sanguinipes (LW)", "Melanoplus dawsoni (SW)") )
+
 #------------------------------------------------
 #ESTIMATE ADULTHOOD BASED ON DI
 
@@ -280,8 +287,8 @@ plot_gdd_elev=ggplot(data=clim2, aes(x=elevation, y = Cdd_seas, group=Year, colo
 dat$elevation= as.numeric(as.character(dat$elev))
 
 #aggregte to spsiteyear
-dat.ave= aggregate(dat, list(dat$spsiteyear, dat$species, dat$site, dat$year, dat$siteyear),FUN=mean, na.rm=TRUE)
-names(dat.ave)[1:5]= c('spsiteyear', 'species', 'site', 'year','siteyear')
+dat.ave= aggregate(dat, list(dat$spsiteyear, dat$species, dat$site, dat$year, dat$siteyear, dat$species.lab),FUN=mean, na.rm=TRUE)
+names(dat.ave)[1:6]= c('spsiteyear', 'species', 'site', 'year','siteyear','species.lab')
 
 #check siteyear
 dat.ave2= aggregate(dat.ave, list(dat.ave$siteyear), FUN=length)
@@ -289,16 +296,35 @@ dat.ave2= aggregate(dat.ave, list(dat.ave$siteyear), FUN=length)
 dat.ave= subset(dat.ave, dat.ave$year %in% 2007:2011)
 
 #average across years
-dat.ave= aggregate(dat.ave, list(dat.ave$elevation, dat.ave$species),FUN=mean, na.rm=TRUE )
-dat.ave$species= dat.ave$Group.2
+dat.ave2= aggregate(dat.ave, list(dat.ave$elevation, dat.ave$species, dat.ave$species.lab),FUN=mean, na.rm=TRUE )
+dat.ave2$species= dat.ave2$Group.2
+dat.ave2$species.lab= dat.ave2$Group.3
 
-plot_gdds_elev=ggplot(data=dat.ave, aes(x=elevation, y = gdd_adult, group=species, color=species))+
-  geom_line()+ geom_point()+
-  theme_bw()+ylab("cummulative growing degree days (C)")+xlab("elevation (m)")
+dat.sd= aggregate(dat.ave, list(dat.ave$elevation, dat.ave$species, dat.ave$species.lab),FUN=sd, na.rm=TRUE )
+dat.sd$species= dat.sd$Group.2
+dat.sd$elevation= dat.sd$Group.1
 
-plot_doy_elev=ggplot(data=dat.ave, aes(x=elevation, y = doy_adult, group=species, color=species))+
+dat.ave2$spsite= paste(dat.ave2$species, dat.ave2$elevation, sep="")
+dat.sd$spsite= paste(dat.sd$species, dat.sd$elevation, sep="")
+match(dat.ave2$spsite, dat.sd$spsite)
+dat.ave2$doy.sd= dat.sd$doy_adult/2 #divide 2 for se due to 4 years of data
+dat.ave2$gdd.sd= dat.sd$gdd_adult/2
+
+#make factor
+dat.ave2$species.lab= factor(dat.ave2$species.lab, levels=c("Aeropedellus clavatus (SW)","Melanoplus boulderensis (SW)","Chloealtis abdominalis (SW)", "Camnula pellucida (LW)", "Melanoplus sanguinipes (LW)", "Melanoplus dawsoni (SW)") )
+#-------------
+
+plot_gdds_elev=ggplot(data=dat.ave2, aes(x=elevation, y = gdd_adult, group=species.lab, color=species.lab))+
+  geom_line()+ geom_point()+ 
+  geom_point(shape = 1,colour = "black")+
+  theme_bw()+ylab("cummulative growing degree days (C)")+xlab("elevation (m)")+ 
+  geom_errorbar(aes(ymin=gdd_adult-gdd.sd, ymax=gdd_adult+gdd.sd), width=.1)+labs(color="species")+scale_color_brewer(palette="YlGnBu")
+
+plot_doy_elev=ggplot(data=dat.ave2, aes(x=elevation, y = doy_adult, group=species, color=species))+
   geom_line()+ geom_point()+
-  theme_bw()+ylab("day of year")+xlab("elevation (m)")+theme(legend.position="none")
+  geom_point(shape = 1,colour = "black")+
+  theme_bw()+ylab("day of year")+xlab("elevation (m)")+theme(legend.position="none")+ 
+  geom_errorbar(aes(ymin=doy_adult-doy.sd, ymax=doy_adult+doy.sd), width=.1)+scale_color_brewer(palette="YlGnBu")
 
 #check data
 unique(dat$siteyear)
@@ -326,6 +352,8 @@ dat.ave.a= subset(dat.ave, dat.ave$year %in% 1958:1960)
 #average across years
 dat.ave.a= aggregate(dat.ave.a, list(dat.ave.a$elevation, dat.ave.a$species),FUN=mean, na.rm=TRUE )
 dat.ave.a$species= dat.ave.a$Group.2
+#make species.lab a factor
+dat.ave.a$species.lab= factor( )
 
 plot_gdds_elev.a=ggplot(data=dat.ave.a, aes(x=elevation, y = gdd_adult, group=species, color=species))+
   geom_line()+ geom_point()+
@@ -446,7 +474,11 @@ dat=dat[-which(dat$species=="Chloealtis abdominalis" & dat$year==2008 & dat$site
 #Fig 2. CDD
 #plot with variable x axis
 
-di.plot.gdd.free= ggplot(data=dat, aes(x=cdd_sum, y = DI,  group=siteyear))+ #, 
+#order species by seasonal timing
+dat$species= factor(dat$species, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Chloealtis abdominalis", "Camnula pellucida","Melanoplus sanguinipes","Melanoplus dawsoni") )
+rs$species= factor(rs$species, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Chloealtis abdominalis", "Camnula pellucida","Melanoplus sanguinipes","Melanoplus dawsoni") )
+
+di.plot.gdd.free= ggplot(data=dat, aes(x=cdd_sum, y = DI,  group=siteyear)) + #, 
   facet_grid(species~elev.lab, scales="free_x") +
   theme_bw()+
   geom_point(aes(color=Cdd_siteave))+geom_line(aes(alpha=0.5,color=Cdd_siteave,linetype=period))+ #+geom_smooth(se=FALSE, aes(alpha=0.5),span=2)+
@@ -602,7 +634,7 @@ dat.t3= subset(dat.t3, dat.t3$year %in% c(2010, 2007))
 #make warm and cold labels
 dat.t3$tempyear<- "2010 cool"
 dat.t3$tempyear[which(dat.t3$year==2007)]<-"2007 warm"
-dat.t3$tempyear= factor(dat.t3$tempyear, levels=c("2010 cool","2007 warm"))
+dat.t3$tempyear= factor(dat.t3$tempyear, levels=c("2007 warm", "2010 cool"))
 
 # #dat.t3$GDDs_binned= gdds[dat.t3$gdd.bin]
 # dat.t3$GDDs_binned= dates[dat.t3$date.bin]
@@ -612,19 +644,20 @@ dat.t3$tempyear= factor(dat.t3$tempyear, levels=c("2010 cool","2007 warm"))
 dat.t3$species= factor(dat.t3$species, levels=c("Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes","Melanoplus dawsoni"))
 
 #elevation factor
-dat.t3$elevation= factor(dat.t3$elevation, levels=c(3048,2591,2195,1752) )
+dat.t3$elevation.lab= paste(dat.t3$elevation, "m",sep="" )
+dat.t3$elevation.lab= factor(dat.t3$elevation.lab, levels=c("3048m","2591m","2195m","1752m") )
 dat.t3$Cdd_siteave= factor(round(dat.t3$Cdd_siteave,2))
 
 #restrict columns to remove NAs
-dat.t3= dat.t3[,c("ordinal","species","elevation","Cdd_siteave","year","tempyear","in6.cper","in5.cper","in4.cper","in3.cper","in2.cper","in1.cper","cdd_sum")]
+dat.t3= dat.t3[,c("ordinal","species","elevation.lab","Cdd_siteave","year","tempyear","in6.cper","in5.cper","in4.cper","in3.cper","in2.cper","in1.cper","cdd_sum")]
 
 #SUBSET SPECIES
 #dat.t3= subset(dat.t3, dat.t3$species %in% c("Melanoplus boulderensis")) #,"Camnula pellucida", "Melanoplus boulderensis", "Melanoplus dawsoni"
 
-comp.md= ggplot(data=dat.t3[which(dat.t3$species=="Melanoplus dawsoni"),]) + geom_line(aes(x=ordinal, y = in5.cper, color="4th and 5th")) + 
+comp.md= ggplot(data=dat.t3[which(dat.t3$species=="Melanoplus dawsoni"),]) + geom_line(aes(x=ordinal, y = in5.cper, color="4th and 5th")) +
   geom_line(aes(x=ordinal, y = in3.cper, color="3rd")) +
   geom_line(aes(x=ordinal, y = in2.cper, color="1st and 2nd"))+
-  facet_grid(elevation~tempyear)+xlim(135,220)+
+  facet_grid(elevation.lab~tempyear)+xlim(135,220)+
   geom_ribbon(aes(x = ordinal, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + 
   geom_ribbon(aes(x = ordinal, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + 
   geom_ribbon(aes(x = ordinal, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ 
@@ -638,7 +671,7 @@ comp.md= ggplot(data=dat.t3[which(dat.t3$species=="Melanoplus dawsoni"),]) + geo
 comp.mb= ggplot(data=dat.t3[which(dat.t3$species=="Melanoplus boulderensis"),]) + geom_line(aes(x=ordinal, y = in5.cper, color="4th and 5th")) + 
   geom_line(aes(x=ordinal, y = in3.cper, color="3rd")) +
   geom_line(aes(x=ordinal, y = in2.cper, color="1st and 2nd"))+
-  facet_grid(elevation~tempyear)+xlim(135,220)+
+  facet_grid(elevation.lab~tempyear)+xlim(135,220)+
   geom_ribbon(aes(x = ordinal, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + 
   geom_ribbon(aes(x = ordinal, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + 
   geom_ribbon(aes(x = ordinal, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ 
@@ -651,7 +684,7 @@ comp.mb= ggplot(data=dat.t3[which(dat.t3$species=="Melanoplus boulderensis"),]) 
 ## FIGURE SX. Composition
 #PLOT
 pdf("Fig4_composition.pdf",height = 8, width = 12)
-plot_grid(comp.mb, comp.md, nrow=1, rel_widths=c(1,1),labels = c('A) M. boulderensis','B) M. dawsoni'))
+plot_grid(comp.mb, comp.md, nrow=1, rel_widths=c(1,1),labels = c('A) M. boulderensis','B) M. dawsoni'), vjust=3, hjust=-0.7)
 dev.off()
 
 #-------------------------
@@ -660,12 +693,12 @@ dev.off()
 comp.md.gdd= ggplot(data=dat.t3[which(dat.t3$species=="Melanoplus dawsoni"),]) + geom_line(aes(x=cdd_sum, y = in5.cper, color="4th and 5th")) + 
   geom_line(aes(x=cdd_sum, y = in3.cper, color="3rd")) +
   geom_line(aes(x=cdd_sum, y = in2.cper, color="1st and 2nd"))+
-  facet_grid(elevation~tempyear)+xlim(0,900)+
+  facet_grid(elevation.lab~tempyear)+xlim(0,900)+
   geom_ribbon(aes(x = cdd_sum, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + 
   geom_ribbon(aes(x = cdd_sum, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + 
   geom_ribbon(aes(x = cdd_sum, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ 
   geom_ribbon(aes(x = cdd_sum, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+
-  ylab("proportion composition")+xlab("cummulative growing degree days (C)")+
+  ylab("proportion composition")+xlab("cumulative growing degree days (°C)")+
   theme(legend.position="bottom", text = element_text(size=14))+labs(color="Instar" )+  
   guides(colour = guide_legend(override.aes = list(size=3)))+
   geom_vline(xintercept = 0, color="gray")+geom_vline(xintercept = 800, color="gray")
@@ -674,12 +707,12 @@ comp.md.gdd= ggplot(data=dat.t3[which(dat.t3$species=="Melanoplus dawsoni"),]) +
 comp.mb.gdd= ggplot(data=dat.t3[which(dat.t3$species=="Melanoplus boulderensis"),]) + geom_line(aes(x=cdd_sum, y = in5.cper, color="4th and 5th")) + 
   geom_line(aes(x=cdd_sum, y = in3.cper, color="3rd")) +
   geom_line(aes(x=cdd_sum, y = in2.cper, color="1st and 2nd"))+
-  facet_grid(elevation~tempyear)+xlim(0,900)+
+  facet_grid(elevation.lab~tempyear)+xlim(0,900)+
   geom_ribbon(aes(x = cdd_sum, ymin = in2.cper, ymax =1),fill = "orange", alpha = 0.4) + 
   geom_ribbon(aes(x = cdd_sum, ymin = in3.cper, ymax = in5.cper),fill = "blue", alpha = 0.4) + 
   geom_ribbon(aes(x = cdd_sum, ymin = in2.cper, ymax = in3.cper),fill = "green", alpha = 0.4)+ 
   geom_ribbon(aes(x = cdd_sum, ymin = 0, ymax = in2.cper),fill = "red", alpha = 0.4)+
-  ylab("proportion composition")+xlab("cummulative growing degree days (C)")+
+  ylab("proportion composition")+xlab("cumulative growing degree days (°C)")+
   theme(legend.position="bottom", text = element_text(size=14))+labs(color="Instar" )+  
   guides(colour = guide_legend(override.aes = list(size=3)))+
   geom_vline(xintercept = 0, color="gray")+geom_vline(xintercept = 800, color="gray")
@@ -687,7 +720,7 @@ comp.mb.gdd= ggplot(data=dat.t3[which(dat.t3$species=="Melanoplus boulderensis")
 ## FIGURE SX. Composition
 #PLOT
 pdf("Fig4_composition_gdd.pdf",height = 8, width = 12)
-plot_grid(comp.mb.gdd, comp.md.gdd, nrow=1, rel_widths=c(1,1),labels = c('A) M. boulderensis','B) M. dawsoni'))
+plot_grid(comp.mb.gdd, comp.md.gdd, nrow=1, rel_widths=c(1,1),labels = c('A) M. boulderensis','B) M. dawsoni'), vjust=3, hjust=-0.7)
 dev.off()
 
 #----------------
@@ -829,4 +862,27 @@ pdf("Fig4__DI_boulderensis.pdf",height = 10, width = 12)
 plot_grid(di.plot.mb, di.plot.gdd.mb, nrow=1, rel_widths=c(1,1),labels = c('a','b'))
 dev.off()
 
+#-----------
+#Map of sites
+
+library(ggmap)
+
+coords= as.data.frame(matrix(NA, nrow=4, ncol=4))
+names(coords)= c("site","elev_m", "lat", "lon")
+coords[,1]=c( "Chautauqua Mesa, 1752m", "A1, 2195m", "B1, 2591m", "C1, 3048m" ) 
+coords[,2]=c( 1752, 2195, 2591, 3048) 
+coords[,3]=c( 40.00, 40.01, 40.02, 40.03) 
+coords[,4]=c( -105.28, -105.37, -105.43, -105.55) 
+
+bbox <- c(left = -105.6, bottom = 39.98, right = -105.2, top = 40.05)
+#retrieve base map
+map= get_stamenmap(bbox, type="terrain")
+
+pdf("FigMap.pdf",height = 5, width = 10)
+
+#plot map: telling it to use the values from the latitude and longitude columns of each of the species-specific dataframes to plot points on a map, and to color the points by which era they are from
+ggmap(map) +geom_point(data=coords, aes(y=lat, x=lon, color=elev_m) ) +ylab("latitude (°)") +xlab("longitude (°)")+ 
+  theme(legend.position="bottom",legend.key.width = unit(1.2, "cm"))+ labs(color = "Elevation (m)")+geom_text(data=coords, aes(label=site),hjust=1, vjust=0)
+
+dev.off()
 

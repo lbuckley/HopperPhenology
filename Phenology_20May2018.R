@@ -55,6 +55,10 @@ ggplot(data=clim1, aes(x=Year, y = Mean, color=Site ))+geom_point()+geom_line() 
 #cum dd
 ggplot(data=clim1, aes(x=Year, y = Cdd_sum, color=Site ))+geom_point()+geom_line() +theme_bw()
 
+#Write out data
+setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/data/")
+write.csv(hop, "HopperClimateData.csv")
+
 #---------
 # Jadult and GDDadult ~year by sites
 

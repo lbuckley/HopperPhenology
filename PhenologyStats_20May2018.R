@@ -34,6 +34,15 @@ mod1= lme(doy_adult~elevation*species,random=~1|year , data=dat1)
 #gdd
 mod2= lme(gdd_adult~elevation*spec,random=~1|year , data=dat1)
 
+#---
+dat.ave.a= aggregate(dat1, list(dat1$elevation, dat1$species, dat1$year),FUN=mean, na.rm=TRUE )
+dat.ave.a$species= dat.ave.a$Group.2
+dat.ave.a$year= dat.ave.a$Group.3
+dat.ave.a= dat.ave.a[,c(4:7,10)]
+
+mod1= lme(doy_adult~elevation*species,random=~1|year , data=dat.ave.a)
+mod2= lme(gdd_adult~elevation*species,random=~1|year , data=dat.ave.a)
+
 #----------------
 #Fig 2. DI
 
@@ -44,6 +53,7 @@ di.dat= na.omit(di.dat)
 di.dat$spsiyr= paste(di.dat$species, di.dat$site, di.dat$year, sep="")
   
 ## STATS FOR PAPER
+#TABLE 1
 #divide by species
 di.dat2= subset(di.dat, di.dat$species==specs[5] )
 #make elevation continuous
@@ -100,7 +110,7 @@ anova(mod2)
 
 #---
 #divide by species
-dat.ss= subset(dat.s, dat.s$species==specs[3])
+dat.ss= subset(dat.s, dat.s$species==specs[6])
 
 #ordinal
 mod1= lm(doy_adult~period+cdd_seas+elevation+cdd_seas:elevation, data=dat.ss)
