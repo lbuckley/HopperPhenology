@@ -5,6 +5,9 @@ library(cowplot)
 require(nlme)
 require(lme4)
 require(plyr)
+library(MuMIn)
+library(RColorBrewer)
+library(lemon)
 
 ## DATA WITH ALL NYMPHS
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/data/")
@@ -147,13 +150,12 @@ dev.off()
 ## FIGURE 1
 #No normalization
 pdf("Fig1_distyear_byspec.pdf",height = 12, width = 12)
-ggplot(data=dat, aes(x=ordinal, y = DIp, group=spsiteyear, color=Cdd_siteave))+ #, lty=diapause
+ggplot(data=dat, aes(x=ordinal, y = DIp, group=spsiteyear, color=Cdd_siteave))+ 
   geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(species~elev.lab, scales="free")+
   theme(strip.text.y = element_text(angle = 0))+ theme(legend.position="bottom", legend.key.width=unit(3,"cm"))+
   scale_color_gradientn(colours = c('blue', 'cadetblue', 'orange')) +
   xlab("ordinal date") +ylab("abundance")+ 
-  theme(strip.text = element_text(face = "italic")) + theme_bw()+
-  labs(color = "seasonal GDDs")
+   labs(color = "seasonal GDDs")+ theme(strip.text = element_text(face = "italic")) 
 dev.off()
 
 #========================================
@@ -285,33 +287,76 @@ ggplot(data=fit.df[which(fit.df$param=="scale"),], aes(x=Cdd_siteave, y = value,
 
 #------
 # FIGURE 2
-pdf("Fig2_PhenFits.pdf", height = 20, width = 12)
-plot_grid(plot.mu, plot.sig, plot.scale, nrow=1, rel_widths=c(1,1,2) )
+
+fit.df$param.lab="peak of abundance distribution"
+fit.df$param.lab[which(fit.df$param=="sig")]= "breadth of abundance distribution"
+fit.df$param.lab[which(fit.df$param=="scale")]= "scale of abundance distribution"
+fit.df$param.lab= factor(fit.df$param.lab, levels=c("peak of abundance distribution","breadth of abundance distribution","scale of abundance distribution") )
+
+#set species colors
+levels(fit.df$species)
+cols= c(brewer.pal(4,"Blues")[2:4],  brewer.pal(5,"Greens")[4:5], brewer.pal(9,"YlOrRd") )
+#image(1:14,1,as.matrix(1:14),col=cols)
+
+# ggplot(fit.df[which(fit.df$param=="mu"),], aes(x=cdd_seas, y=value, colour=as.factor(timing), group=species)) +
+#   geom_line() + theme_classic() +
+#   facet_grid(~elev.lab, drop=TRUE, scales="free") +
+#   xlab("")+ylab("peak of abundance distribution")
+
+plot.mu <- ggplot(fit.df[which(fit.df$param=="mu"),], aes(x=cdd_seas, y=value, colour=species, group=species, shape=period)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
+  theme_classic() +  #geom_line() +
+  facet_grid(~elev.lab, drop=TRUE, scales="free") +
+  xlab("")+ylab("peak of abundance distribution")+scale_color_manual(values=cols) #+ theme(legend.position="none")
+
+plot.sig <- ggplot(fit.df[which(fit.df$param=="sig"),], aes(x=cdd_seas, y=value, colour=species, group=species, shape=period)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
+  theme_classic() +  #geom_line() +
+  facet_grid(~elev.lab, drop=TRUE, scales="free") +
+  xlab("")+ylab("breadth of abundance distribution")+scale_color_manual(values=cols)
+
+plot.scale <- ggplot(fit.df[which(fit.df$param=="scale"),], aes(x=cdd_seas, y=value, colour=species, group=species, shape=period)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
+  theme_classic() +  #geom_line() +
+  facet_grid(~elev.lab, drop=TRUE, scales="free") +
+  xlab("seasonal growing degree days")+ylab("scale of abundance distribution")+scale_color_manual(values=cols)+ theme(legend.position="bottom", ncol=4)
+
+pdf("Fig2_PhenFits.pdf", height = 10, width = 8)
+grid_arrange_shared_legend(plot.mu, plot.scale, ncol = 1, nrow = 2, position='right')
+#plot_grid(plot.mu, plot.scale, nrow=2, rel_heights=c(1,1.4) )
 dev.off()
 
 #---------------------
 #stats
 #mu, sig, scale
-param.mu= fit.df[which(fit.df$param=="mu"),] 
+param.mu= fit.df[which(fit.df$param=="mu"),] #mu scale sig
 param.mu= na.omit(param.mu)
+param.sig= fit.df[which(fit.df$param=="sig"),] #mu scale sig
+param.sig= na.omit(param.sig)
+param.scale= fit.df[which(fit.df$param=="scale"),] #mu scale sig
+param.scale= na.omit(param.scale)
 
-#omit nymphal diapausers
-param.mu= na.omit(param.mu[which(param.mu$timing!=1),])
+##omit nymphal diapausers
+#param.mu= na.omit(param.mu[which(param.mu$timing!=1),])
 
 #STATS ****
 #lme model
-#mod1=lme(value~ Cdd_siteave +elev + timing+  Cdd_siteave:elev + Cdd_siteave:timing, random=~1|species, data=param.mu )
-#mod1=lme(-value~ cdd_seas +elev + timing+  cdd_seas:elev + cdd_seas:timing +elev:timing, random=~1|species, data=param.mu )
-mod1=lme(value~ cdd_seas +cdd_seas:elev + cdd_seas:timing, random=~1|species, data=param.mu )
-summary(mod1)
-anova(mod1)
+mod1=lme(value~ cdd_seas +cdd_seas:elev + cdd_seas:timing + cdd_seas:timing:elev, random=~1|species, data=param.mu )
 
-mod1=lme(value~ cdd_seas*elev*timing, random=~1|species, data=param.mu )
-library(MuMIn)
-dredge(mod1)
+#TABLE 1
+mod.mu=lme(value~ cdd_seas +timing +elev +cdd_seas:timing, random=~1|species, data=param.mu )
+mod.sig=lme(value~ cdd_seas+elev, random=~1|species, data=param.sig )
+mod.scale=lme(value~ cdd_seas +timing +elev +cdd_seas:timing +elev:timing, random=~1|species, data=param.scale )
 
-mod1= lme(value~ cdd_seas+timing, random=~1|species, data=param.mu )
-summary(mod1)
+summary(mod.scale)
+anova(mod.mu)
+
+dredge(mod.scale)
+
+#Various output
+coefs= coef(mod1)
+RIaS <-unlist( ranef(mod1)) #Random Intercepts and Slopes
+FixedEff <- fixef(mod1)    # Fixed Intercept and Slope
+plot(mod1,species~resid(.))
+
+param.mu <- predict(mod1)
 
 #----
 #just 2195 elev
@@ -637,7 +682,6 @@ po2$sp1= factor(po2$sp1, levels=row.names(timing.mat) )
 po2$elev.lab= paste(po2$elevation, "m", sep="")
 metric.lab= c("overlapping area (proportion)", "days of overlap", "days difference in peak abundance" )
 
-#FIGURE 3
 #plot by elevation
 if(metric.ind==1) pdf("Fig3S_PhenOverlap_byGDD_overlaparea.pdf", height = 10, width = 10)
 if(metric.ind==2) pdf("Fig3S_PhenOverlap_byGDD_daysoverlap.pdf", height = 10, width = 10)
@@ -658,7 +702,12 @@ dev.off()
 #STATS ACROSS SPECIES #*****
 po2$elevation= as.numeric(po2$elevation)
 
+mod1=lme(value~ cdd*sp1_timing*sp2_timing*elevation, random=~1|sp1/sp2, data=po2)
+
 mod1=lme(value~ cdd + cdd:elevation + cdd:sp1_timing +cdd:sp2_timing+ cdd:sp1_timing:elevation +cdd:sp2_timing:elevation+cdd:sp1_timing:sp2_timing, random=~1|sp1/sp2, data=po2)
+
+mod1=lme(value~ cdd +elevation +sp1_timing +sp2_timing +cdd:elevation + cdd:sp1_timing +cdd:sp2_timing +elevation:sp1_timing  +elevation:sp2_timing +sp1_timing:sp2_timing +cdd:sp1_timing:sp2_timing +elevation:sp1_timing:sp2_timing, random=~1|sp1/sp2, data=po2)
+
 #dredge(mod1)
 summary(mod1)
 anova(mod1)
@@ -818,13 +867,25 @@ po.tim$st.lab[po.tim$sp2_timing==3]<-"compared: late season"
 
 po.tim$fst.lab= factor(po.tim$fst.lab, levels=c("focal: early season","focal: mid season","focal: late season") )
 po.tim$st.lab= factor(po.tim$st.lab, levels=c("compared: early season","compared: mid season","compared: late season") )
- 
+
+#FIG 3
 pdf("Fig3_CommOverlap_bytiming.pdf", height = 10, width = 10)
 ggplot(data=po.tim[which(po.tim$metric==2),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(shape=period, fill=period), size=2)+
   theme_bw()+geom_smooth(method="lm", se=FALSE)+facet_grid(fst.lab~st.lab, drop=TRUE, scales="free_x")+
   scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
                      values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +theme(legend.position="bottom")+ylab(metric.lab[1])+xlab("seasonal growing degree days")
 dev.off()
+
+#Stats
+#STATS ACROSS SPECIES #*****
+po.tim2$elevation= as.numeric(as.character(po.tim2$elevation))
+po.tim2= na.omit(po.tim)
+
+mod1=lm(value~ cdd*sp1_timing*sp2_timing*elevation, data=po.tim2)
+
+#dredge(mod1)
+summary(mod1)
+anova(mod1)
 
 #------------
 #FIGURE 4: plot accross community
