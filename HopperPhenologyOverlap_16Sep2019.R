@@ -127,26 +127,6 @@ dat$species= factor(dat$species, levels=timing.mat$species )
 
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/figures/")
 
-pdf("Fig_dipnorm.pdf",height = 11, width = 10)
-ggplot(data=dat, aes(x=ordinal, y = DIpNorm, group=species, color=species, lty=diapause))+
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(year~elev.lab, scales="free")+ylim(0,0.2)+
-  ylab("Proportional abundance")+xlab("Day of year")+ theme(legend.position="bottom")+
-  guides(color=guide_legend(nrow=2,byrow=TRUE))
-dev.off()
-
-pdf("Fig_dipnormyear.pdf",height = 10, width = 10)
-ggplot(data=dat, aes(x=ordinal, y = DIpNorm, group=species, color=species))+
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(year~elev.lab, scales="free")+ylim(0,0.2)+ylab("Proportional abundance")+xlab("Day of year")
-dev.off()
-
-#---
-#by species
-pdf("Fig_distnormyear_byspec.pdf",height = 20, width = 10)
-ggplot(data=dat, aes(x=ordinal, y = DIpNorm, group=spsiteyear, color=Cdd_siteave, lty=diapause))+
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(species~site, scales="free")+ylim(0,0.2)+
-  theme(strip.text.y = element_text(angle = 0))
-dev.off()
-
 ## FIGURE 1
 #No normalization
 pdf("Fig1_distyear_byspec.pdf",height = 12, width = 12)
@@ -254,44 +234,6 @@ fit.df1 <- dcast(fit.df, species + year + site + Cdd_siteave ~ param, value.var=
 fit.df1$spsiteyear= paste(fit.df1$species,fit.df1$year, fit.df1$site, sep="_")
 
 #--------------------
-#plot
-#mu, sig, scale
-plot.mu= ggplot(data=fit.df[which(fit.df$param=="mu"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
-  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_line()+ theme(legend.position="none")+
-  xlab("")+ylab("peak of abundance distribution")+
-scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
-                   values=c("darkorange3", "darkorange", "cornflowerblue","blue3"))+
-  labs(color = "Elevation")+theme(strip.background = element_blank(),
-                                  strip.text.y = element_blank(),strip.text.x = element_blank()) #+geom_smooth(method="lm", se=FALSE)
-
-plot.sig= ggplot(data=fit.df[which(fit.df$param=="sig"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
-  geom_point(aes(shape=period, fill=period))+facet_grid(species~param, scales="free")+geom_line()+ theme(legend.position="none")+
-  xlab("seasonal growing degree days")+ylab("breadth of abundance distribution")+
-scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
-                   values=c("darkorange3", "darkorange", "cornflowerblue","blue3"))+
-  labs(color = "Elevation")+theme(strip.background = element_blank(),
-                                  strip.text.y = element_blank(),strip.text.x = element_blank())
-
-plot.scale= ggplot(data=fit.df[which(fit.df$param=="scale"),], aes(x=Cdd_siteave, y = value, group=elev.lab, color=elev.lab))+
-  geom_point(aes(shape=period, fill=period, color=elev.lab ))+facet_grid(species~param, scales="free")+geom_line()+ theme(legend.position="right")+
-  xlab("")+ylab("scale of abundance distribution")+
-  theme(strip.text.y = element_text(angle = 0),strip.text = element_text(face = "italic")) +labs(color = "elevation")+theme(strip.text.x = element_blank())+ 
-  scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"), values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) 
-
-#------
-#revise structure
-fit.df$spel= paste(fit.df$species, fit.df$elev, sep="_")
-
-#mu and scale?
-ggplot(data=fit.df[which(fit.df$param=="scale"),], aes(x=Cdd_siteave, y = value, group=spel, color=as.factor(elev)))+
-  geom_point(aes(shape=period, fill=period))+facet_grid(timing~elev, scales="free")+geom_line()+ theme(legend.position="none")+
-  xlab("")+ylab("peak of abundance distribution")+
-  scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
-                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3"))+
-  labs(color = "Elevation")+theme(strip.background = element_blank(),
-                                  strip.text.y = element_blank(),strip.text.x = element_blank()) #+geom_smooth(method="lm", se=FALSE)
-
-#------
 # FIGURE 2
 
 fit.df$param.lab="peak of abundance distribution"
@@ -355,14 +297,6 @@ summary(mod.sig)
 anova(mod.mu)
 
 dredge(mod.scale)
-
-#Various output
-coefs= coef(mod1)
-RIaS <-unlist( ranef(mod1)) #Random Intercepts and Slopes
-FixedEff <- fixef(mod1)    # Fixed Intercept and Slope
-plot(mod1,species~resid(.))
-
-param.mu <- predict(mod1)
 
 #-------
 #plots
@@ -519,12 +453,6 @@ clim1$siteyear= paste(clim1$Site, clim1$Year, sep="")
 po1$siteyear= paste(po1$site, po1$year, sep="")
 
 #select cdd metric
-#clim1$Cdd=  clim1$Cdd_sum
-#clim1$Cdd=  clim1$Cdd_june
-#clim1$Cdd=  clim1$Cdd_july
-#clim1$Cdd=  clim1$Cdd_aug
-#clim1$Cdd=  clim1$Cdd_early
-#clim1$Cdd=  clim1$Cdd_mid
 clim1$Cdd= clim1$Cdd_seas
 
 po1$Tmean=NA
@@ -535,13 +463,6 @@ matched= which(!is.na(match1))
 po1$Tmean[matched]<- clim1$Mean[match1[matched]]  
 po1$cdd[matched]<- clim1$Cdd[match1[matched]]
 po1$cdd_july[matched]<- clim1$Cdd_july[match1[matched]]
-
-# ##match back to dat
-# datm= dat[duplicated(dat$siteyear)==FALSE,]
-# match1= match(po1$siteyear, datm$siteyear)
-# matched= which(!is.na(match1))
-# po1$Tmean[matched]<- datm$Tmean[match1[matched]]  
-# po1$cdd[matched]<- datm$cdd_seas[match1[matched]] 
 
 #---
 #Change years for plotting ### FIX
@@ -563,10 +484,6 @@ hop.agg= aggregate(hop1, list(hop1$species),FUN=mean) #fix for hop1$site,
 hop.agg= hop.agg[order(hop.agg$ordinal),]
 
 #make species factor for plotting
-#po1$sp1= factor(po1$sp1, levels=hop.agg$Group.1)
-#po1$sp2= factor(po1$sp2, levels=hop.agg$Group.1)
-#po1$sp1= factor(po1$sp1, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes", "Melanoplus dawsoni", "Chloealtis abdominalis"))
-#po1$sp2= factor(po1$sp2, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Camnula pellucida","Melanoplus sanguinipes", "Melanoplus dawsoni", "Chloealtis abdominalis"))
 po1$sp1= factor(po1$sp1, levels=specs)
 po1$sp2= factor(po1$sp2, levels=specs)
 
@@ -586,12 +503,6 @@ po1= po1[which(!is.na(po1$sp2_timing)),]
 #PLOT
 #add elevation
 po1$elevation= as.factor(elevs[match(po1$site, sites)])
-
-#drop Chataqua for now 
-#po1= po1[which(po1$site!="CHA"),]
-
-#focus on sites B1 and C1 for now
-#po1= po1[which(po1$site %in% c("B1", "C1")) ,] #[which(po1$metric==2),] #
 
 #*********************************************
 #Plot overlap
@@ -645,11 +556,6 @@ po2$sig.gdd= factor(p.mat[match1,"sig.gdd"], levels=c("significant","nonsignific
 #---
 
 #PLOTS
-
-#Full grids
-#ggplot(data=po2, aes_string(x=x1, y = "value", color="elevation"))+geom_point(aes(shape=period, fill=period), size=2)+
-#  facet_grid(sp1~sp2, drop=TRUE)+theme_bw()+geom_smooth(method="lm", se=FALSE, aes(linetype=sig.gdd))+ 
-#  scale_color_manual(values=c("darkorange", "blue","darkgreen","purple"))#+xlim(200,750)
 
 #drop if less than 5 years 
 po2.counts= ddply(po2, c("site", "sp","elevation","elevspec"), summarise, count=length(unique(year)) )
