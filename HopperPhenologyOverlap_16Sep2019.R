@@ -248,6 +248,12 @@ fit.df$species= factor(fit.df$species, levels=timing.mat$species )
 #add elevation label
 fit.df$elev.lab= paste(fit.df$elev, "m", sep="")
 
+#cast
+rownames(fit.df) <- c()
+fit.df1 <- dcast(fit.df, species + year + site + Cdd_siteave ~ param, value.var="value")
+fit.df1$spsiteyear= paste(fit.df1$species,fit.df1$year, fit.df1$site, sep="_")
+
+#--------------------
 #plot
 #mu, sig, scale
 plot.mu= ggplot(data=fit.df[which(fit.df$param=="mu"),], aes(x=Cdd_siteave, y = value, group=elev, color=as.factor(elev)))+
@@ -316,7 +322,7 @@ plot.sig <- ggplot(fit.df[which(fit.df$param=="sig"),], aes(x=cdd_seas, y=value,
 plot.scale <- ggplot(fit.df[which(fit.df$param=="scale"),], aes(x=cdd_seas, y=value, colour=species, group=species, shape=period)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
   theme_classic() +  #geom_line() +
   facet_grid(~elev.lab, drop=TRUE, scales="free") +
-  xlab("seasonal growing degree days")+ylab("scale of abundance distribution")+scale_color_manual(values=cols)+ theme(legend.position="bottom", ncol=4)
+  xlab("seasonal growing degree days")+ylab("scale of abundance distribution")+scale_color_manual(values=cols)
 
 pdf("Fig2_PhenFits.pdf", height = 10, width = 8)
 grid_arrange_shared_legend(plot.mu, plot.scale, ncol = 1, nrow = 2, position='right')
@@ -324,7 +330,7 @@ grid_arrange_shared_legend(plot.mu, plot.scale, ncol = 1, nrow = 2, position='ri
 dev.off()
 
 #---------------------
-#stats
+#TABLE STATS
 #mu, sig, scale
 param.mu= fit.df[which(fit.df$param=="mu"),] #mu scale sig
 param.mu= na.omit(param.mu)
@@ -345,7 +351,7 @@ mod.mu=lme(value~ cdd_seas +timing +elev +cdd_seas:timing, random=~1|species, da
 mod.sig=lme(value~ cdd_seas+elev, random=~1|species, data=param.sig )
 mod.scale=lme(value~ cdd_seas +timing +elev +cdd_seas:timing +elev:timing, random=~1|species, data=param.scale )
 
-summary(mod.scale)
+summary(mod.sig)
 anova(mod.mu)
 
 dredge(mod.scale)
@@ -358,44 +364,20 @@ plot(mod1,species~resid(.))
 
 param.mu <- predict(mod1)
 
-#----
-#just 2195 elev
-#mu, sig, scale
-param.mu= fit.df[which(fit.df$param=="scale"),] 
-param.mu= na.omit(param.mu)
+#-------
+#plots
 
-#omit nymphal diapausers
-param.mu= na.omit(param.mu[which(param.mu$elev==2195),])
+devtools::install_github("hohenstein/remef")
+library(remef)
 
-#STATS ****
-#lme model
-mod1=lme(value~ cdd_seas + cdd_seas:timing, random=~1|species, data=param.mu )
-summary(mod1)
-anova(mod1)
+model=lmer(value~ cdd_seas +timing +elev +cdd_seas:timing+(1|species), REML=TRUE, data=param.mu)
 
-#---
-#early season species
-#mu, sig, scale
-param.mu= fit.df[which(fit.df$param=="scale"),]
-param.mu= na.omit(param.mu[which(param.mu$timing==1),])
-
-#STATS ****
-#lme model
-mod1=lme(value~ cdd_seas, random=~1|species, data=param.mu )
-summary(mod1)
-anova(mod1)
-
-#----
-#mu, sig, scale
-param.mu= fit.df[which(fit.df$param=="mu"),] #"mu","sig","scale"
-param.mu= na.omit(param.mu)
-
-#by species
-#spec.ind= 3
-#param.mu= param.mu[which(param.mu$species==specs[spec.ind]),]
-
-mod1= lm(value~ cdd_seas +cdd_seas:elev, data=param.mu )
-anova(mod1)
+y_partial <- remef(model, fix = c("timing", "elev"), ran = "all")
+plot(param.mu$cdd_seas, y_partial)
+y_partial <- remef(model, fix = c("cdd_seas", "elev"), ran = "all")
+plot(param.mu$timing, y_partial)
+y_partial <- remef(model, fix = c("cdd_seas", "timing"), ran = "all")
+plot(param.mu$elev, y_partial)
 
 #=================================================
 #Calculate overlap metrics
@@ -810,6 +792,8 @@ po1$sp1_sp2= paste(po1$sp1_timing, po1$sp2_timing, sep="_")
 po.tim= ddply(po1, c("site", "year","metric","period","siteyear","sp1_sp2","sp1_timing", "sp2_timing"), summarise,
                value = mean(value, na.rm=TRUE), Tmean= Tmean[1], cdd=cdd[1],cdd_july=cdd_july[1],elevation=elevation[1], Cdd_siteave= Cdd_siteave[1])
 po.tim$elev.lab= paste(po.tim$elevation,"m",sep="")
+#symmetric, so drop repeated combinations
+po.tim<- po.tim[-which(po.tim$sp1_sp2 %in% c("2_1","3_1","3_2")),]
 
 #by timing
 po.st= ddply(po1, c("site", "year","metric","period","siteyear","sp1","sp1_timing","sp2_timing"), summarise,
@@ -871,21 +855,54 @@ po.tim$st.lab= factor(po.tim$st.lab, levels=c("compared: early season","compared
 #FIG 3
 pdf("Fig3_CommOverlap_bytiming.pdf", height = 10, width = 10)
 ggplot(data=po.tim[which(po.tim$metric==2),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(shape=period, fill=period), size=2)+
-  theme_bw()+geom_smooth(method="lm", se=FALSE)+facet_grid(fst.lab~st.lab, drop=TRUE, scales="free_x")+
+  theme_bw()+geom_smooth(method="lm", se=FALSE)+facet_wrap(fst.lab~st.lab, drop=TRUE, scales="free_x")+
   scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
                      values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +theme(legend.position="bottom")+ylab(metric.lab[1])+xlab("seasonal growing degree days")
 dev.off()
 
-#Stats
+#TABLE STATS
 #STATS ACROSS SPECIES #*****
+po.tim2= na.omit(po.tim[which(po.tim$metric==2),])
 po.tim2$elevation= as.numeric(as.character(po.tim2$elevation))
-po.tim2= na.omit(po.tim)
 
-mod1=lm(value~ cdd*sp1_timing*sp2_timing*elevation, data=po.tim2)
+mod1=lm(value~ cdd+sp1_timing+sp2_timing+elevation+cdd:sp1_timing+cdd:sp2_timing+cdd:elevation+sp1_timing:sp2_timing, data=po.tim2)
 
 #dredge(mod1)
 summary(mod1)
 anova(mod1)
+
+#--------------------------
+#partial residual plot
+library(faraway)
+
+my.prplot= function (g, i, xlabs)  #beautify plot
+{
+  xl <- xlabs[i]
+  yl <- paste("")
+  x <- model.matrix(g)[, i + 1]
+  plot(x, g$coeff[i + 1] * x + g$res, xlab = xl, ylab = yl, col=rgb(0.2,0.2, 0.2, 0.5),pch=16)        #@I played with different plot characters to get different plots. Not sold
+  abline(0, g$coeff[i + 1])
+  invisible()
+}
+#--------------
+
+xlabs= c("GDDs","focal species timing", "compared species timing", "elevation (m)", "GDDs:focal species timing", "GDDs:compared species timing", "GDDs:elevation (m)", "focal:compared species timing")
+
+pdf("OverlapPR.pdf",height = 10, width = 10)
+
+par(mfrow=c(3,3), cex=1.1, lwd=1, mar=c(3,2, 1, 1), mgp=c(1.3, 0.5, 0), oma=c(0,2,0,0), bty="l", cex.lab=1.2)
+my.prplot(mod1, 1, xlabs)
+my.prplot(mod1, 2, xlabs)
+my.prplot(mod1, 3, xlabs)
+my.prplot(mod1, 4, xlabs)
+my.prplot(mod1, 5, xlabs)
+my.prplot(mod1, 6, xlabs)
+my.prplot(mod1, 7, xlabs)
+my.prplot(mod1, 8, xlabs)
+
+mtext("Partial residual of overlapping area (proportion)", side=2, line = -0.5, cex=1.3, outer=TRUE)
+
+dev.off()
 
 #------------
 #FIGURE 4: plot accross community
@@ -930,6 +947,9 @@ mod1= lm(value~ cdd+ cdd:elevation, data=po.comm[which(po.comm$metric==7),])
 mod1= lm(value~ cdd+ cdd:elevation, data=po.comm[which(po.comm$metric==9),])
 summary(mod1)
 anova(mod1)
+
+prplot(mod1, 1)
+prplot(mod1, 2)
 
 #single elevation
 mod1= lm(value~ cdd, data=po.comm[which(po.comm$metric==9 & po.comm$elevation==3048),])

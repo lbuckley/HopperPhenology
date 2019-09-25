@@ -32,8 +32,8 @@ clim = clim %>% group_by(Year,Site) %>% arrange(Julian) %>% mutate(cdd_sum = cum
 # cdd_june = cumsum(dd_june),cdd_july = cumsum(dd_july),cdd_aug = cumsum(dd_aug),cdd_early = cumsum(dd_early),cdd_mid = cumsum(dd_mid),cdd_ac = cumsum(dd_ac),cdd_mb = cumsum(dd_mb),cdd_ms = cumsum(dd_ms)
 
 #load hopper data
-setwd( paste(fdir, "grasshoppers/SexCombined/", sep="") )
-hop= read.csv("HopperData_May2018.csv")
+#setwd( paste(fdir, "grasshoppers/SexCombined/", sep="") )
+#hop= read.csv("HopperData_May2018.csv")
 
 #======================================================
 #CALCULATE GDD METRICS
@@ -205,7 +205,7 @@ dat$period= factor(dat$period, levels=c("resurvey", "initial") )
 #elevation
 dat$elev= factor(dat$elev, levels=c(3048,2591,2195,1752) )
 #species
-dat$species= factor(dat$species, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Chloealtis abdominalis", "Camnula pellucida", "Melanoplus sanguinipes", "Melanoplus dawsoni") )
+dat$species= factor(dat$species) #, levels=c("Aeropedellus clavatus","Melanoplus boulderensis","Chloealtis abdominalis", "Camnula pellucida", "Melanoplus sanguinipes", "Melanoplus dawsoni") )
 
 #add wind length
 dat$species.lab= paste(dat$species,"(SW)", sep=" ")
