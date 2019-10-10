@@ -8,6 +8,7 @@ require(plyr)
 library(MuMIn)
 library(RColorBrewer)
 library(lemon)
+library(ggplot2)
 
 ## DATA WITH ALL NYMPHS
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/data/")
@@ -251,23 +252,25 @@ cols= c(brewer.pal(4,"Blues")[2:4],  brewer.pal(5,"Greens")[4:5], brewer.pal(9,"
 #   facet_grid(~elev.lab, drop=TRUE, scales="free") +
 #   xlab("")+ylab("peak of abundance distribution")
 
-plot.mu <- ggplot(fit.df[which(fit.df$param=="mu"),], aes(x=cdd_seas, y=value, colour=species, group=species, shape=period)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
-  theme_classic() +  #geom_line() +
-  facet_grid(~elev.lab, drop=TRUE, scales="free") +
-  xlab("")+ylab("peak of abundance distribution")+scale_color_manual(values=cols) #+ theme(legend.position="none")
+#DROP shape=period
 
-plot.sig <- ggplot(fit.df[which(fit.df$param=="sig"),], aes(x=cdd_seas, y=value, colour=species, group=species, shape=period)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
+plot.mu <- ggplot(fit.df[which(fit.df$param=="mu"),], aes(x=cdd_seas, y=value, colour=species, group=species)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
   theme_classic() +  #geom_line() +
   facet_grid(~elev.lab, drop=TRUE, scales="free") +
-  xlab("")+ylab("breadth of abundance distribution")+scale_color_manual(values=cols)
+  xlab("")+ylab("peak of abundance distribution (day)")+scale_color_manual(values=cols)+ theme(legend.text = element_text(face = "italic")) #+ theme(legend.position="none")
 
-plot.scale <- ggplot(fit.df[which(fit.df$param=="scale"),], aes(x=cdd_seas, y=value, colour=species, group=species, shape=period)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
+plot.sig <- ggplot(fit.df[which(fit.df$param=="sig"),], aes(x=cdd_seas, y=log(value), colour=species, group=species)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
   theme_classic() +  #geom_line() +
   facet_grid(~elev.lab, drop=TRUE, scales="free") +
-  xlab("seasonal growing degree days")+ylab("scale of abundance distribution")+scale_color_manual(values=cols)
+  xlab("")+ylab("log(breadth of abundance distribution) (days)")+scale_color_manual(values=cols)+ theme(legend.text = element_text(face = "italic"))
+
+plot.scale <- ggplot(fit.df[which(fit.df$param=="scale"),], aes(x=cdd_seas, y=log(value), colour=species, group=species)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
+  theme_classic() +  #geom_line() +
+  facet_grid(~elev.lab, drop=TRUE, scales="free") +
+  xlab("seasonal growing degree days (C)")+ylab("log(scale of abundance distribution) (individuals)")+scale_color_manual(values=cols)+ theme(legend.text = element_text(face = "italic"))
 
 pdf("Fig2_PhenFits.pdf", height = 10, width = 8)
-grid_arrange_shared_legend(plot.mu, plot.scale, ncol = 1, nrow = 2, position='right')
+grid_arrange_shared_legend(plot.mu, plot.sig, plot.scale, ncol = 1, nrow = 3, position='right')
 #plot_grid(plot.mu, plot.scale, nrow=2, rel_heights=c(1,1.4) )
 dev.off()
 
@@ -301,7 +304,7 @@ dredge(mod.scale)
 #-------
 #plots
 
-devtools::install_github("hohenstein/remef")
+#devtools::install_github("hohenstein/remef")
 library(remef)
 
 model=lmer(value~ cdd_seas +timing +elev +cdd_seas:timing+(1|species), REML=TRUE, data=param.mu)
@@ -720,55 +723,64 @@ po.comm$elev.lab= paste(po.comm$elevation,"m",sep="")
 #order species by timing
 po.st$sp1= factor(po.st$sp1, levels=row.names(timing.mat) )
 po.st$st.lab= NA
-po.st$st.lab[po.st$sp2_timing==1]<-"early season"
-po.st$st.lab[po.st$sp2_timing==2]<-"mid season"
+po.st$st.lab[po.st$sp2_timing==1]<-"nymphal diapausers"
+po.st$st.lab[po.st$sp2_timing==2]<-"early season"
 po.st$st.lab[po.st$sp2_timing==3]<-"late season"
+po.st$st.lab= factor(po.st$st.lab, levels=c("nymphal diapausers","early season","late season") )
 
-pdf("FigSX_CommOverlap_bysptiming_m2.pdf", height = 10, width = 10)
-ggplot(data=po.st[which(po.st$metric==2),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
+pdf("FigS1_CommOverlap_bysptiming_m2.pdf", height = 10, width = 10)
+ggplot(data=po.st[which(po.st$metric==2),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(), size=2)+
   theme_bw()+geom_smooth(method="lm", se=FALSE)+facet_grid(sp1~st.lab, drop=TRUE, scales="free_x") +theme(strip.text.y = element_text(angle = 0))+
   scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
-                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +theme(legend.position="bottom")
+                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +theme(legend.position="bottom")+
+  ylab("overlapping area (proportion)")+xlab("seasonal growing degree days (C)")+ 
+  theme(strip.text = element_text(face = "italic")) 
 dev.off()
 
-pdf("FigSX_CommOverlap_bysptiming_m7.pdf", height = 10, width = 10)
-ggplot(data=po.st[which(po.st$metric==7),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
+pdf("FigS2_CommOverlap_bysptiming_m7.pdf", height = 10, width = 10)
+ggplot(data=po.st[which(po.st$metric==7),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(), size=2)+
   theme_bw()+geom_smooth(method="lm", se=FALSE)+facet_grid(sp1~st.lab, drop=TRUE, scales="free_x") +theme(strip.text.y = element_text(angle = 0))+
   scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
-                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +theme(legend.position="bottom")
+                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +theme(legend.position="bottom")+
+  ylab("days of overlap")+xlab("seasonal growing degree days (C)")+ 
+  theme(strip.text = element_text(face = "italic")) 
 dev.off()
 
-pdf("FigSX_CommOverlap_bysptiming_m9.pdf", height = 10, width = 10)
-ggplot(data=po.st[which(po.st$metric==9),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+
+pdf("FigS3_CommOverlap_bysptiming_m9.pdf", height = 10, width = 10)
+ggplot(data=po.st[which(po.st$metric==9),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(), size=2)+
   theme_bw()+geom_smooth(method="lm", se=FALSE)+facet_grid(sp1~st.lab, drop=TRUE, scales="free_x") +theme(strip.text.y = element_text(angle = 0))+
   scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
-                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +theme(legend.position="bottom")
+                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +theme(legend.position="bottom")+
+  ylab("days difference in peak abundance")+xlab("seasonal growing degree days (C)")+ 
+  theme(strip.text = element_text(face = "italic")) 
 dev.off()
 
 #-----
 po.tim$fst.lab= NA
-po.tim$fst.lab[po.tim$sp1_timing==1]<-"focal: early season"
-po.tim$fst.lab[po.tim$sp1_timing==2]<-"focal: mid season"
+po.tim$fst.lab[po.tim$sp1_timing==1]<-"focal: nymphal diapausers"
+po.tim$fst.lab[po.tim$sp1_timing==2]<-"focal: early season"
 po.tim$fst.lab[po.tim$sp1_timing==3]<-"focal: late season"
 po.tim$st.lab= NA
-po.tim$st.lab[po.tim$sp2_timing==1]<-"compared: early season"
-po.tim$st.lab[po.tim$sp2_timing==2]<-"compared: mid season"
+po.tim$st.lab[po.tim$sp2_timing==1]<-"compared: nymphal diapausers"
+po.tim$st.lab[po.tim$sp2_timing==2]<-"compared: early season"
 po.tim$st.lab[po.tim$sp2_timing==3]<-"compared: late season"
 
-po.tim$fst.lab= factor(po.tim$fst.lab, levels=c("focal: early season","focal: mid season","focal: late season") )
-po.tim$st.lab= factor(po.tim$st.lab, levels=c("compared: early season","compared: mid season","compared: late season") )
+po.tim$fst.lab= factor(po.tim$fst.lab, levels=c("focal: nymphal diapausers","focal: early season","focal: late season") )
+po.tim$st.lab= factor(po.tim$st.lab, levels=c("compared: nymphal diapausers","compared: early season","compared: late season") )
 
 #FIG 3
 pdf("Fig3_CommOverlap_bytiming.pdf", height = 10, width = 10)
-ggplot(data=po.tim[which(po.tim$metric==2),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(shape=period, fill=period), size=2)+
+ggplot(data=po.tim[which(po.tim$metric==2),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(), size=2)+
   theme_bw()+geom_smooth(method="lm", se=FALSE)+facet_wrap(fst.lab~st.lab, drop=TRUE, scales="free_x")+
   scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
-                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +theme(legend.position="bottom")+ylab(metric.lab[1])+xlab("seasonal growing degree days")
+                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +
+  theme(legend.position="bottom")+ylab(metric.lab[1])+xlab("seasonal growing degree days (C)")+ 
+  guides(color=guide_legend(title="elevation (m)" ))
 dev.off()
 
-#TABLE STATS
-#STATS ACROSS SPECIES #*****
-po.tim2= na.omit(po.tim[which(po.tim$metric==2),])
+#TABLE 2 STATS
+#STATS ACROSS SPECIES #***** #metrics 2,7,9
+po.tim2= na.omit(po.tim[which(po.tim$metric==9),])
 po.tim2$elevation= as.numeric(as.character(po.tim2$elevation))
 
 mod1=lm(value~ cdd+sp1_timing+sp2_timing+elevation+cdd:sp1_timing+cdd:sp2_timing+cdd:elevation+sp1_timing:sp2_timing, data=po.tim2)
@@ -794,7 +806,7 @@ my.prplot= function (g, i, xlabs)  #beautify plot
 
 xlabs= c("GDDs","focal species timing", "compared species timing", "elevation (m)", "GDDs:focal species timing", "GDDs:compared species timing", "GDDs:elevation (m)", "focal:compared species timing")
 
-pdf("OverlapPR.pdf",height = 10, width = 10)
+pdf("FigS4_OverlapPR.pdf",height = 10, width = 10)
 
 par(mfrow=c(3,3), cex=1.1, lwd=1, mar=c(3,2, 1, 1), mgp=c(1.3, 0.5, 0), oma=c(0,2,0,0), bty="l", cex.lab=1.2)
 my.prplot(mod1, 1, xlabs)
@@ -824,24 +836,27 @@ plot.m8= ggplot(data=po.comm[which(po.comm$metric==8),], aes(x=cdd, y = value, c
   theme_bw()+geom_smooth(method="lm", se=FALSE)+labs(title="days overlap, norm")+ theme(legend.position="none")
 
 #focus on 2,7,9?
-plot.m2= ggplot(data=po.comm[which(po.comm$metric==2),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(shape=period, fill=period), size=2)+
-  theme_bw()+geom_smooth(method="lm", se=FALSE) +theme(legend.position="none") +ylab(metric.lab[1])+xlab("seasonal growing degree days")+
+plot.m2= ggplot(data=po.comm[which(po.comm$metric==2),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(), size=2)+
+  theme_bw()+geom_smooth(method="lm", se=FALSE) +theme(legend.position="none") +ylab(metric.lab[1])+xlab("")+
  scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
-                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3"))
+                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3"))+ 
+  guides(color=guide_legend(title="elevation (m)" ))
 
-plot.m7= ggplot(data=po.comm[which(po.comm$metric==7),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(shape=period, fill=period), size=2)+
-  theme_bw()+geom_smooth(method="lm", se=FALSE) +theme(legend.position="none") +ylab(metric.lab[2])+xlab("seasonal growing degree days")+
+plot.m7= ggplot(data=po.comm[which(po.comm$metric==7),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(), size=2)+
+  theme_bw()+geom_smooth(method="lm", se=FALSE) +theme(legend.position="none") +ylab(metric.lab[2])+xlab("")+
   scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
-                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3"))
+                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3"))+ 
+  guides(color=guide_legend(title="elevation (m)" ))
 
-plot.m9= ggplot(data=po.comm[which(po.comm$metric==9),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(shape=period, fill=period), size=2)+
-  theme_bw()+geom_smooth(method="lm", se=FALSE) +theme(legend.position="bottom") +ylab(metric.lab[3])+xlab("seasonal growing degree days")+
+plot.m9= ggplot(data=po.comm[which(po.comm$metric==9),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(), size=2)+
+  theme_bw()+geom_smooth(method="lm", se=FALSE) +theme(legend.position="bottom") +ylab(metric.lab[3])+xlab("seasonal growing degree days (C)")+
   scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
-                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3"))
+                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3"))+ 
+  guides(color=guide_legend(title="elevation (m)" ))
 
 #FIGURE 4
 pdf("Fig4_CommOverlap.pdf", height = 10, width = 6)
-plot_grid(plot.m2, plot.m7, plot.m9, nrow=3)
+plot_grid(plot.m2, plot.m7, plot.m9, nrow=3, labels=c("a.","b.","c."), label_x=0.1)
 dev.off()
 
 #----
