@@ -1,10 +1,12 @@
 library(dplyr)
+library(zoo)
 
+fdir= "/Volumes/GoogleDrive/My\ Drive/AlexanderResurvey/DataForAnalysis/"
 setwd("/Volumes/GoogleDrive/My\ Drive/AlexanderResurvey/DataForAnalysis/ForLTER/final/")
 
-#source degree days function
-setwd("/Users/laurenbuckley/HopperPhenology/")
-source("degreedays.R")
+# #source degree days function
+# setwd("/Users/laurenbuckley/HopperPhenology/")
+# source("degreedays.R")
 
 #--------------------------------------
 #HOPPERS
@@ -42,9 +44,14 @@ clim.c1$Site="C1"
 clim.d1$Site="D1"
 clim.noaa$Site="NOAA"
 
-#combine ##currently omits flags
-clim= rbind(clim.a1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean")], clim.b1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean")], clim.c1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean")], clim.d1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean")], clim.noaa[,c("Site","Date","Year","Month","Julian","Max","Min","Mean")])
-clim$Source= "McGuireetal"
+#combine
+clim= rbind(clim.a1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean","FlagMax","FlagMin")], clim.b1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean","FlagMax","FlagMin")], clim.c1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean","FlagMax","FlagMin")], clim.d1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean","FlagMax","FlagMin")], clim.noaa[,c("Site","Date","Year","Month","Julian","Max","Min","Mean","FlagMax","FlagMin")])
+clim$Source= "measured"
+#account for flags
+inds= which(!clim$FlagMin=="" | !clim$FlagMax=="")
+clim$Source[inds]="modelled"
+#drop flag columns
+clim= clim[,c("Site","Date","Year","Month","Julian","Max","Min","Mean","Source")]
 
 #------
 #load recent climate data from Cesar
@@ -141,8 +148,9 @@ b1$Year=b1$year
 b1$Julian=b1$jday
 b1$Mean=NA
 b1$Month=NA
+b1$Source= "measured"
 
-clim= rbind(clim, b1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean")])
+clim= rbind(clim, b1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean","Source")])
 
 #C1
 c1= read.csv("c-1tdayv.ml.data.csv")
@@ -153,8 +161,9 @@ c1$Site="C1"
 c1$Month=NA
 #subset to missing years
 c1= subset(c1, c1$Year %in% c(2013,2015))
+c1$Source= "measured"
 
-clim= rbind(clim, c1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean")])
+clim= rbind(clim, c1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean","Source")])
 
 #D1
 d1= read.csv("d-1cr23x-cr1000.daily.ml.data_up.csv")
@@ -162,15 +171,16 @@ d1$Site="D1"
 d1$Month=NA
 #subset to missing years
 d1= subset(d1, d1$Year>2008)
+d1$Source= "measured"
 
-clim= rbind(clim, d1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean")])
+clim= rbind(clim, d1[,c("Site","Date","Year","Month","Julian","Max","Min","Mean","Source")])
 
 #=====================================
 # Remove duplicates
 
 clim$Site_Year_Julian= paste(clim$Site, clim$Year, clim$Julian, sep="")
 # average across duplicates
-clim1= clim %>% group_by(Site,Date,Year,Month,Julian) %>% summarise(Min= mean(Min, na.rm=TRUE),Max= mean(Max, na.rm=TRUE),Mean= mean(Mean, na.rm=TRUE) )
+clim1= clim %>% group_by(Site,Date,Year,Month,Julian, Source) %>% summarise(Min= mean(Min, na.rm=TRUE),Max= mean(Max, na.rm=TRUE),Mean= mean(Mean, na.rm=TRUE) )
 clim1= as.data.frame(clim1)
 
 #replace NaN
@@ -189,24 +199,15 @@ clim2 = clim2 %>% group_by(Year,Site) %>% summarise(Min= mean(Min, na.rm=TRUE),M
 
 ggplot(data=clim2, aes(x=Year, y = Min, color=Site ))+geom_line() +theme_bw()
 
-#=====================================
 # WRITE OUT DATA
-setwd( paste(fdir, "climate", sep="") )   
+#setwd( paste(fdir, "climate", sep="") )   
 #write.csv(clim1, "AlexanderClimateAll.csv")
 
-#check counts of data
-years= c(1958:1960, 2006:2015)
-
-climsub=clim1[clim1$Year %in% years,]
-#counts across sites years
-climsub= climsub %>% group_by(Site,Year) %>% summarise(Min= length(na.omit(Min)),Max= length(na.omit(Max)),Mean= length(na.omit(Mean)) )
-climsub= as.data.frame(climsub)
-
-#-------------------------------
+#=====================================
 #CHECK AND INTERPOLATE CLIMATE DATA
 
-setwd( paste(fdir, "climate", sep="") )   
-clim1= read.csv("AlexanderClimateAll.csv")
+#setwd( paste(fdir, "climate", sep="") )   
+#clim1= read.csv("AlexanderClimateAll.csv")
 
 # Subset climate data to sites and years for which we have grasshopper data
 sites <- c("A1", "B1", "C1", "NOAA")
@@ -227,7 +228,7 @@ allClim$sjy= paste(allClim$Site, allClim$Julian, allClim$Year, sep="_")
 match1= match(clim1$sjy,allClim$sjy)
 matched= which(!is.na(match1))
 
-clim1[matched,c("Site","Julian","Year","Max","Min","Mean")]= allClim[match1[matched], c("Site","Julian","Year","Max","Min","Mean")]
+clim1[matched,c("Site","Julian","Year","Max","Min","Mean","Source")]= allClim[match1[matched], c("Site","Julian","Year","Max","Min","Mean","Source")]
 # Re-order Climate data
 clim1 <- clim1[order(clim1$Site, clim1$Year, clim1$Julian),]
 
@@ -248,6 +249,7 @@ match1= match(clim1$sjy, clim.b1.2009.tmax$sjy)
 matched= which(!is.na(match1))
 
 clim1[matched,c("Max","Min")]= clim.b1.2009.tmax[match1[matched], c("Max","Min")]
+clim1[matched,"Source"]= "modelled"
 
 #----
 #ADD C1 2015
@@ -266,6 +268,7 @@ match1= match(clim1$sjy, clim.c1.2015$sjy)
 matched= which(!is.na(match1))
 
 clim1[matched,c("Max","Min")]= clim.c1.2015[match1[matched], c("Max","Min")]
+clim1[matched,"Source"]= "measured"
 
 #----
 #ADD RECONSTRUCTED A1 data
@@ -278,6 +281,7 @@ match1= match(clim1$sjy, clim.a1$sjy)
 matched= which(!is.na(match1))
 
 clim1[matched,c("Max","Min")]= clim.a1[match1[matched], c("Max","Min")]
+clim1[matched,"Source"]= "modelled"
 
 #------------------------
 
@@ -285,11 +289,14 @@ clim.nas= clim1[(is.na(clim1$Min) | is.na(clim1$Max)),]
 clim.nas$Year= as.factor(clim.nas$Year)
 #counts by sites, years
 clim.nas2= clim.nas %>% group_by(Site, Year) %>% summarise(count=length(Julian) )
+clim.nas2= as.data.frame(clim.nas2)
 
 # Interpolate data
 inds= which(clim1$Site=="B1"&clim1$Year=="2012")
 clim1$Min[inds] <- na.approx(clim1$Min[inds], na.rm = F, maxgap=5)
 clim1$Max[inds] <- na.approx(clim1$Max[inds], na.rm = F, maxgap=5)
+inds= which(clim1$Site=="B1"&clim1$Year=="2012"&is.na(clim1$Min) )
+clim1$Source[inds] <- "modelled"
 #approx first value
 clim1$Min[inds[1]]= clim1$Min[inds[2]]
 clim1$Max[inds[1]]= clim1$Max[inds[2]]
@@ -297,75 +304,27 @@ clim1$Max[inds[1]]= clim1$Max[inds[2]]
 inds= which(clim1$Site=="C1"&clim1$Year=="2013")
 clim1$Min[inds] <- na.approx(clim1$Min[inds], na.rm = F, maxgap=5)
 clim1$Max[inds] <- na.approx(clim1$Max[inds], na.rm = F, maxgap=5)
+inds= which(clim1$Site=="C1"&clim1$Year=="2013"&is.na(clim1$Min) )
+clim1$Source[inds] <- "modelled"
 #--------
 inds= which(clim1$Site=="C1"&clim1$Year=="2015")
 clim1$Min[inds] <- na.approx(clim1$Min[inds], na.rm = F, maxgap=6)
 clim1$Max[inds] <- na.approx(clim1$Max[inds], na.rm = F, maxgap=6)
+inds= which(clim1$Site=="C1"&clim1$Year=="2015"&is.na(clim1$Min) )
+clim1$Source[inds] <- "modelled"
 #--------
 inds= which(clim1$Site=="A1"&clim1$Year=="2010")
 clim1$Min[inds] <- na.approx(clim1$Min[inds], na.rm = F, maxgap=6)
 clim1$Max[inds] <- na.approx(clim1$Max[inds], na.rm = F, maxgap=6)
-
-#--------------------
-#Add degree days
-clim= clim1
-
-#Use NOAA for CHA
-clim$Site= as.character(clim$Site)
-clim[which(clim$Site=="NOAA"),"Site"]<-"CHA"
-clim$Site= as.factor(clim$Site)
-
-#--------------------------------
-## ADD GDD data
-dd= degree.days.mat(cbind(clim$Min, clim$Max),LDT=12)
-inds= which(!is.na(clim[,"Min"])& !is.na(clim[,"Max"]) )
-clim$dd=NA
-clim$dd[inds]= apply( clim[inds,c("Min","Max")], MARGIN=1, FUN=degree.days.mat, LDT=12 )  
-
-#-----------
-# Calculate additional DD metrics
-#Summer 60-243
-#June 152-181
-#July 182-212
-#Aug 213-243
-#Early 60-151
-#Mid 60-181
-
-clim$dd_sum=clim$dd
-clim[which(clim$Julian<60 | clim$Julian>243),"dd_sum"]<-0
-
-#add fall
-clim$dd_sumfall=clim$dd
-clim[which(clim$Julian<60),"dd_sumfall"]<-0
-
-clim$dd_june=clim$dd
-clim[which(clim$Julian<152 | clim$Julian>181),"dd_june"]<-0
-
-clim$dd_july=clim$dd
-clim[which(clim$Julian<182 | clim$Julian>212),"dd_july"]<-0
-
-clim$dd_aug=clim$dd
-clim[which(clim$Julian<213 | clim$Julian>243),"dd_aug"]<-0
-
-clim$dd_early=clim$dd
-clim[which(clim$Julian<60 | clim$Julian>151),"dd_early"]<-0
-
-clim$dd_mid=clim$dd
-clim[which(clim$Julian<60 | clim$Julian>181),"dd_mid"]<-0
-
-#---------------------
-#species specific cdd: month before mean ordinal date
-clim$dd_ac=clim$dd
-clim[which(clim$Julian<(195-30) | clim$Julian>(195+30) ),"dd_ac"]<-0
-clim$dd_mb=clim$dd
-clim[which(clim$Julian<(208-30) | clim$Julian>(208+30) ),"dd_mb"]<-0
-clim$dd_ms=clim$dd
-clim[which(clim$Julian<(224-30) | clim$Julian>(224+30) ),"dd_ms"]<-0
+inds= which(clim1$Site=="A1"&clim1$Year=="2010"&is.na(clim1$Min) )
+clim1$Source[inds] <- "modelled"
 
 #=========================
 #WRITE OUT
 setwd( paste(fdir, "climate", sep="") )   
-write.csv(clim,"AlexanderClimateAll_filled_May2018.csv")
+#change Julian to Ordinal
+names(clim1)[2]="Ordinal"
+write.csv(clim1[,c(1:5,8)], "AlexanderClimateAll_filled_Oct2019.csv", row.names = FALSE)
 
 #--------------------------
 #CHECK DATA
