@@ -729,28 +729,28 @@ po.st$st.lab[po.st$sp2_timing==3]<-"late season"
 po.st$st.lab= factor(po.st$st.lab, levels=c("nymphal diapausers","early season","late season") )
 
 pdf("FigS1_CommOverlap_bysptiming_m2.pdf", height = 10, width = 10)
-ggplot(data=po.st[which(po.st$metric==2),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(), size=2)+
+ggplot(data=po.st[which(po.st$metric==2),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(), size=2)+
   theme_bw()+geom_smooth(method="lm", se=FALSE)+facet_grid(sp1~st.lab, drop=TRUE, scales="free_x") +theme(strip.text.y = element_text(angle = 0))+
   scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
-                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +theme(legend.position="bottom")+
+                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3"), name = "Elevation (m)") +theme(legend.position="bottom")+
   ylab("overlapping area (proportion)")+xlab("seasonal growing degree days (C)")+ 
   theme(strip.text = element_text(face = "italic")) 
 dev.off()
 
 pdf("FigS2_CommOverlap_bysptiming_m7.pdf", height = 10, width = 10)
-ggplot(data=po.st[which(po.st$metric==7),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(), size=2)+
+ggplot(data=po.st[which(po.st$metric==7),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(), size=2)+
   theme_bw()+geom_smooth(method="lm", se=FALSE)+facet_grid(sp1~st.lab, drop=TRUE, scales="free_x") +theme(strip.text.y = element_text(angle = 0))+
   scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
-                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +theme(legend.position="bottom")+
+                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3"), name = "Elevation (m)") +theme(legend.position="bottom")+
   ylab("days of overlap")+xlab("seasonal growing degree days (C)")+ 
   theme(strip.text = element_text(face = "italic")) 
 dev.off()
 
 pdf("FigS3_CommOverlap_bysptiming_m9.pdf", height = 10, width = 10)
-ggplot(data=po.st[which(po.st$metric==9),], aes(x=cdd, y = value, color=elevation))+geom_point(aes(), size=2)+
+ggplot(data=po.st[which(po.st$metric==9),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(), size=2)+
   theme_bw()+geom_smooth(method="lm", se=FALSE)+facet_grid(sp1~st.lab, drop=TRUE, scales="free_x") +theme(strip.text.y = element_text(angle = 0))+
   scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
-                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +theme(legend.position="bottom")+
+                     values=c("darkorange3", "darkorange", "cornflowerblue","blue3"), name = "Elevation (m)") +theme(legend.position="bottom")+
   ylab("days difference in peak abundance")+xlab("seasonal growing degree days (C)")+ 
   theme(strip.text = element_text(face = "italic")) 
 dev.off()
