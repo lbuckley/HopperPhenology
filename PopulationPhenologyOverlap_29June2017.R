@@ -285,7 +285,7 @@ doyq.plot= ggplot(data=hop5, aes(x=elev, y = ordinal, color=year, linetype=quant
 #----------------------
 #STATS
 
-hop6= hop5[which(hop5$quantile==85),c(3,5,15,31:37)]
+hop6= hop5[which(hop5$quantile==15),c(3,5,15,31:37)]
 mod1= lm(ordinal~elev*species+year, data=hop6)
 summary(mod1)
 anova(mod1)
