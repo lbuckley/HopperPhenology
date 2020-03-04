@@ -285,7 +285,7 @@ grid_arrange_shared_legend(plot.mu, plot.sig, plot.scale, ncol = 1, nrow = 3, po
 dev.off()
 
 #---------------------
-#TABLE STATS
+#TABLE STATS, TABLE 1 
 #mu, sig, scale
 param.mu= fit.df[which(fit.df$param=="mu"),] #mu scale sig
 param.mu= na.omit(param.mu)
@@ -299,9 +299,23 @@ param.scale= na.omit(param.scale)
 
 #STATS ****
 #lme model
-mod1=lme(value~ cdd_seas +cdd_seas:elev + cdd_seas:timing + cdd_seas:timing:elev, random=~1|species, data=param.mu )
+mod1=lme(value~ cdd_seas +timing +elev + cdd_seas:timing + cdd_seas:elev  +timing:elev+ cdd_seas:timing:elev, random=~1|species, data=param.mu )
+mod1=lme(value~ cdd_seas +timing +elev + cdd_seas:timing + cdd_seas:elev  +timing:elev+ cdd_seas:timing:elev, random=~1|species, data=param.sig )
+mod1=lme(value~ cdd_seas +timing +elev + cdd_seas:timing + cdd_seas:elev  +timing:elev+ cdd_seas:timing:elev, random=~1|species, data=param.scale )
+#repeat with categorical elevation
+mod1=lme(value~ cdd_seas +timing +factor(elev) + cdd_seas:timing + cdd_seas:factor(elev)  +timing:factor(elev)+ cdd_seas:timing:factor(elev), random=~1|species, data=param.mu )
+mod1=lme(value~ cdd_seas +timing +factor(elev) + cdd_seas:timing + cdd_seas:factor(elev)  +timing:factor(elev)+ cdd_seas:timing:factor(elev), random=~1|species, data=param.sig )
+mod1=lme(value~ cdd_seas +timing +factor(elev) + cdd_seas:timing + cdd_seas:factor(elev)  +timing:factor(elev)+ cdd_seas:timing:factor(elev), random=~1|species, data=param.scale )
+
+md= dredge(mod1)
+#or as a 95\% confidence set:
+ma= model.avg(md, cumsum(weight) <= .99)
+#The 'subset' (or 'conditional') average only averages over the models where the parameter appears
+summary(ma)
 
 #TABLE 1
+
+#selected models
 mod.mu=lme(value~ cdd_seas +timing +elev +cdd_seas:timing, random=~1|species, data=param.mu )
 mod.sig=lme(value~ cdd_seas+elev, random=~1|species, data=param.sig )
 mod.scale=lme(value~ cdd_seas +timing +elev +cdd_seas:timing +elev:timing, random=~1|species, data=param.scale )
@@ -309,10 +323,8 @@ mod.scale=lme(value~ cdd_seas +timing +elev +cdd_seas:timing +elev:timing, rando
 summary(mod.sig)
 anova(mod.mu)
 
-dredge(mod.scale)
-
 #-----------------
-#Analyze SE
+#Analyze accounting for SE
 #metafor or  MCMCglmm
 library(metafor)
 
@@ -849,11 +861,19 @@ dev.off()
 po.tim2= na.omit(po.tim[which(po.tim$metric==9),])
 po.tim2$elevation= as.numeric(as.character(po.tim2$elevation))
 
-mod1=lm(value~ cdd+sp1_timing+sp2_timing+elevation+cdd:sp1_timing+cdd:sp2_timing+cdd:elevation+sp1_timing:sp2_timing, data=po.tim2)
+mod1=lm(value~ cdd+sp1_timing+sp2_timing+elevation+
+        cdd:sp1_timing+cdd:sp2_timing+cdd:elevation+
+      sp1_timing:sp2_timing+sp1_timing:elevation+ sp2_timing:elevation, data=po.tim2, na.action = "na.fail")
+#elevation as factor
+mod1=lm(value~ cdd+sp1_timing+sp2_timing+factor(elevation)+
+          cdd:sp1_timing+cdd:sp2_timing+cdd:factor(elevation)+
+          sp1_timing:sp2_timing+sp1_timing:factor(elevation)+ sp2_timing:factor(elevation), data=po.tim2, na.action = "na.fail")
 
-#dredge(mod1)
-summary(mod1)
-anova(mod1)
+md= dredge(mod1)
+#or as a 95\% confidence set:
+ma= model.avg(md, cumsum(weight) <= .99)
+#The 'subset' (or 'conditional') average only averages over the models where the parameter appears
+summary(ma)
 
 #--------------------------
 #partial residual plot
