@@ -323,8 +323,11 @@ mod.scale=lme(value~ cdd_seas +timing +elev +cdd_seas:timing +elev:timing, rando
 summary(mod.sig)
 anova(mod.mu)
 
+#r.squaredGLMM(mod.mu) 
+
 #-----------------
 #Analyze accounting for SE
+
 #metafor or  MCMCglmm
 library(metafor)
 
@@ -984,3 +987,87 @@ ggplot(data=mu.var, aes(x=cdd_seas, y = var, color=elev.lab)) +geom_point(aes(si
 
 mu.var[mu.var$elev==2195,]
 
+#---------------------------
+#Check abundance consequences
+#https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/j.2041-210x.2012.00261.x
+
+mod.mu=lme(value~ cdd_seas +timing +elev +cdd_seas:timing, random=~1|species, data=param.mu )
+
+library(r2glmm)
+
+#https://cran.r-project.org/web/packages/r2glmm/README.html
+#also http://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#how-do-i-compute-a-coefficient-of-determination-r2-or-an-analogue-for-glmms
+
+r2beta(mod.mu,method='sgv')
+r2beta(mod.mu,method='nsj')
+
+#---------------------------
+# Interaction surface plot
+
+library(akima)
+
+po.t<- po.tim[which(po.tim$metric==2),]
+po.t$elevation= as.numeric(as.character(po.t$elevation))
+
+#combined
+fld <- with(po.t, interp(x = cdd, y = elevation, z = value, duplicate=TRUE))
+
+gdat <- interp2xyz(fld, data.frame=TRUE)
+
+p3d= ggplot(gdat) + 
+  aes(x = x, y = y, z = z, fill = z) + 
+  geom_tile() + 
+  coord_equal() +
+  geom_contour(color = "white", alpha = 0.5) + 
+  scale_fill_distiller(palette="Spectral", na.value="white", name="overlapping area") +
+  theme_bw(base_size=18)+xlab("seasonal GDDs (°C)")+ylab("elevation (m)") +theme(legend.position="bottom")
+
+#+ coord_fixed(ratio = 0.01) 
+#,trans = "log", breaks=c(1,2, 5,10,20)
+#+ylim(c(0,1500))+xlim(c(-2,23))
+
+#---------------------------
+focs= c("focal: nymphal diapausers","focal: early season","focal: late season")
+comps= c("compared: nymphal diapausers","compared: early season","compared: late season")
+
+foc.lab= c("nymphal diapausers:","early season:","late season:")
+comp.lab= c("nymphal diapausers","early season","late season")
+
+#restrict to focal timing
+for(k in 1:6){
+
+  if(k==1) {po.sub<- po.t[which(po.t$fst.lab==focs[1] & po.t$st.lab==comps[1]),];lab<-paste(foc.lab[1],comp.lab[1],sep=" ")} 
+  if(k==2) {po.sub<- po.t[which(po.t$fst.lab==focs[1] & po.t$st.lab==comps[2]),];lab<-paste(foc.lab[1],comp.lab[2],sep=" ")} 
+  if(k==3) {po.sub<- po.t[which(po.t$fst.lab==focs[1] & po.t$st.lab==comps[3]),];lab<-paste(foc.lab[1],comp.lab[3],sep=" ")} 
+  if(k==4) {po.sub<- po.t[which(po.t$fst.lab==focs[2] & po.t$st.lab==comps[2]),];lab<-paste(foc.lab[2],comp.lab[2],sep=" ")} 
+  if(k==5) {po.sub<- po.t[which(po.t$fst.lab==focs[2] & po.t$st.lab==comps[3]),];lab<-paste(foc.lab[2],comp.lab[3],sep=" ")} 
+  if(k==6) {po.sub<- po.t[which(po.t$fst.lab==focs[3] & po.t$st.lab==comps[3]),];lab<-paste(foc.lab[3],comp.lab[3],sep=" ")} 
+
+  #combined
+  fld <- with(po.sub, interp(x = cdd, y = elevation, z = value, duplicate=TRUE))
+  
+  gdat <- interp2xyz(fld, data.frame=TRUE)
+  
+  sp= ggplot(gdat) + 
+    aes(x = x, y = y, z = z, fill = z) + 
+    geom_tile() + 
+    coord_equal() +
+    geom_contour(color = "white", alpha = 0.5) + 
+    scale_fill_distiller(palette="Spectral", na.value="white", name="overlapping area") +
+    theme_bw(base_size=12)+xlab("seasonal GDDs (°C)")+ylab("elevation (m)") +theme(legend.position="bottom")+
+    ggtitle(lab)
+  
+  if(k==1) po.sub1<- sp
+  if(k==2) po.sub2<- sp
+  if(k==3) po.sub3<- sp
+  if(k==4) po.sub4<- sp
+  if(k==5) po.sub5<- sp
+  if(k==6) po.sub6<- sp
+  
+  }
+
+library(cowplot)
+
+pdf("FigSx_CommOverlapContour.pdf", height = 10, width = 12)
+plot_grid(po.sub1,po.sub2,po.sub3,po.sub4,po.sub5,po.sub6,ncol=3)
+dev.off()
