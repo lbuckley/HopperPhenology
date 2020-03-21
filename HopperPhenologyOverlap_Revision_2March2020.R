@@ -298,10 +298,11 @@ param.scale= na.omit(param.scale)
 #param.mu= na.omit(param.mu[which(param.mu$timing!=1),])
 
 #STATS ****
-#lme model
+#lme model 
 mod1=lme(value~ cdd_seas +timing +elev + cdd_seas:timing + cdd_seas:elev  +timing:elev+ cdd_seas:timing:elev, random=~1|species, data=param.mu )
 mod1=lme(value~ cdd_seas +timing +elev + cdd_seas:timing + cdd_seas:elev  +timing:elev+ cdd_seas:timing:elev, random=~1|species, data=param.sig )
 mod1=lme(value~ cdd_seas +timing +elev + cdd_seas:timing + cdd_seas:elev  +timing:elev+ cdd_seas:timing:elev, random=~1|species, data=param.scale )
+
 #repeat with categorical elevation
 mod1=lme(value~ cdd_seas +timing +factor(elev) + cdd_seas:timing + cdd_seas:factor(elev)  +timing:factor(elev)+ cdd_seas:timing:factor(elev), random=~1|species, data=param.mu )
 mod1=lme(value~ cdd_seas +timing +factor(elev) + cdd_seas:timing + cdd_seas:factor(elev)  +timing:factor(elev)+ cdd_seas:timing:factor(elev), random=~1|species, data=param.sig )
@@ -309,19 +310,29 @@ mod1=lme(value~ cdd_seas +timing +factor(elev) + cdd_seas:timing + cdd_seas:fact
 
 md= dredge(mod1)
 #or as a 95\% confidence set:
-ma= model.avg(md, cumsum(weight) <= .99)
+ma= model.avg(md, cumsum(weight) <= .99) #with adding any models with delta AIC<2
+#for param.sig
+ma= model.avg(md, cumsum(weight) <= .996)
+
 #The 'subset' (or 'conditional') average only averages over the models where the parameter appears
 summary(ma)
 
-#TABLE 1
+#TABLE 1 (top model, checked delta AIC of next model >2)
+mod1=lme(value~ cdd_seas +timing, random=~1|species, data=param.mu )
+mod1=lme(value~ timing, random=~1|species, data=param.sig )
+mod1=lme(value~ cdd_seas +timing +cdd_seas:timing, random=~1|species, data=param.scale )
 
-#selected models
-mod.mu=lme(value~ cdd_seas +timing +elev +cdd_seas:timing, random=~1|species, data=param.mu )
-mod.sig=lme(value~ cdd_seas+elev, random=~1|species, data=param.sig )
-mod.scale=lme(value~ cdd_seas +timing +elev +cdd_seas:timing +elev:timing, random=~1|species, data=param.scale )
+#categorical elevation
+mod1=lme(value~ timing, random=~1|species, data=param.mu )
+mod1=lme(value~ cdd_seas +timing, random=~1|species, data=param.sig )
+mod1=lme(value~ cdd_seas +timing+cdd_seas:timing, random=~1|species, data=param.scale )
 
-summary(mod.sig)
-anova(mod.mu)
+summary(mod1)
+anova(mod1)
+
+#marginal R squared values are those associated with your fixed effects, the conditional ones are those of your fixed effects plus the random effects
+r.squaredGLMM(mod1)
+
 
 #r.squaredGLMM(mod.mu) 
 
@@ -344,8 +355,8 @@ match1= match(param.mu$spsiyr, param.mu.sd$spsiyr)
 param.mu$mu.sd= param.mu.sd$value[match1]
 
 #rma model
-rma.mv(value, mu.sd^2, mods = ~ cdd_seas +timing +elev +cdd_seas*timing +elev*timing, data=param.mu, method="REML", random = ~ 1 | species)
-rma.mv(value, mu.sd^2, mods = ~ cdd_seas +timing +elev, data=param.mu, method="REML", random = ~ 1 | species)
+rma.mv(value, mu.sd^2, mods = ~ cdd_seas +timing , data=param.mu, method="REML", random = ~ 1 | species)
+rma.mv(value, mu.sd^2, mods = ~ timing, data=param.mu, method="REML", random = ~ 1 | species)
 
 #----
 #sig
@@ -361,8 +372,8 @@ match1= match(param.sig$spsiyr, param.sig.sd$spsiyr)
 param.sig$sig.sd= param.sig.sd$value[match1]
 
 #rma model
-rma.mv(value, sig.sd^2, mods = ~ cdd_seas +timing +elev +cdd_seas*timing +elev*timing, data=param.sig, method="REML", random = ~ 1 | species)
-rma.mv(value, sig.sd^2, mods = ~ cdd_seas + elev, data=param.sig, method="REML", random = ~ 1 | species)
+rma.mv(value, sig.sd^2, mods = ~ timing, data=param.sig, method="REML", random = ~ 1 | species)
+rma.mv(value, sig.sd^2, mods = ~ cdd_seas +timing, data=param.sig, method="REML", random = ~ 1 | species)
 
 #---
 #scale
@@ -379,8 +390,8 @@ match1= match(param.scale$spsiyr, param.scale.sd$spsiyr)
 param.scale$scale.sd= param.scale.sd$value[match1]
 
 #rma model
-rma.mv(value, scale.sd^2, mods = ~ cdd_seas +timing +elev +cdd_seas*timing +elev*timing, data=param.scale, method="REML", random = ~ 1 | species)
-rma.mv(value, scale.sd^2, mods = ~ cdd_seas +timing +elev, data=param.scale, method="REML", random = ~ 1 | species)
+rma.mv(value, scale.sd^2, mods = ~ cdd_seas +timing +cdd_seas:timing, data=param.scale, method="REML", random = ~ 1 | species)
+rma.mv(value, scale.sd^2, mods = ~ cdd_seas +timing+cdd_seas:timing, data=param.scale, method="REML", random = ~ 1 | species)
 
 #-------
 #plots
@@ -989,17 +1000,36 @@ mu.var[mu.var$elev==2195,]
 
 #---------------------------
 #Check abundance consequences
-#https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/j.2041-210x.2012.00261.x
+#is it possible to see whether species abundances decline at higher levels of overlap?
 
-mod.mu=lme(value~ cdd_seas +timing +elev +cdd_seas:timing, random=~1|species, data=param.mu )
+#add parameter fits to po1
+po1$spsiteyear= paste(po1$sp1, po1$year, po1$site,  sep="_")
+po.sp.agg= aggregate(po1, list(po1$spsiteyear, po1$metric, po1$sp1),FUN=mean) 
+colnames(po.sp.agg)[1:3]<-c("spsiteyear","metric","sp1")
 
-library(r2glmm)
+match1= match(po.sp.agg$spsiteyear, fit.df1$spsiteyear)
+is.matched= which(!is.na(match1))
+po.sp.agg$mu=NA
+po.sp.agg$sig=NA
+po.sp.agg$scale=NA
 
-#https://cran.r-project.org/web/packages/r2glmm/README.html
-#also http://bbolker.github.io/mixedmodels-misc/glmmFAQ.html#how-do-i-compute-a-coefficient-of-determination-r2-or-an-analogue-for-glmms
+po.sp.agg[is.matched,"mu"]= fit.df1[match1[is.matched],"mu"]
+po.sp.agg[is.matched,"sig"]= fit.df1[match1[is.matched],"sig"]
+po.sp.agg[is.matched,"scale"]= fit.df1[match1[is.matched],"scale"]
 
-r2beta(mod.mu,method='sgv')
-r2beta(mod.mu,method='nsj')
+po.sp.agg1=na.omit(po.sp.agg[,c("spsiteyear","value","metric","sp1","cdd","scale")])
+
+mod.scale=lme(scale~ value*cdd, random=~1|spsiteyear, data=po.sp.agg1[po.sp.agg1$metric==2,])
+mod.scale=lme(scale~ value*cdd, random=~1|sp1, data=po.sp.agg1[po.sp.agg1$metric==7,])
+mod.scale=lme(scale~ value*cdd, random=~1|sp1, data=po.sp.agg1[po.sp.agg1$metric==9,])
+#metrics 2,7,9
+summary(mod.scale)
+
+plot(po.sp.agg1[po.sp.agg1$metric==2,"value"],po.sp.agg1[po.sp.agg1$metric==2,"scale"])
+#plot
+ggplot(data=po.sp.agg1[po.sp.agg1$metric==2,], aes(x=value, y = scale, color=cdd))+geom_point()+
+  facet_wrap(~sp1)+theme_bw()+geom_smooth(method="lm", se=FALSE)+scale_color_viridis_c()
+  
 
 #---------------------------
 # Interaction surface plot
