@@ -134,7 +134,8 @@ pdf("Fig1_distyear_byspec.pdf",height = 12, width = 12)
 ggplot(data=dat, aes(x=ordinal, y = DIp, group=spsiteyear, color=Cdd_siteave))+ 
   geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(species~elev.lab, scales="free")+
   theme(strip.text.y = element_text(angle = 0))+ theme(legend.position="bottom", legend.key.width=unit(3,"cm"))+
-  scale_color_gradientn(colours = c('blue', 'cadetblue', 'orange')) +
+  scale_color_viridis_c()+
+  #scale_color_gradientn(colours = c('blue', 'cadetblue', 'orange')) +
   xlab("ordinal date") +ylab("abundance")+ 
    labs(color = "seasonal GDDs")+ theme(strip.text = element_text(face = "italic")) 
 dev.off()
@@ -267,17 +268,20 @@ cols= c(brewer.pal(4,"Blues")[2:4],  brewer.pal(5,"Greens")[4:5], brewer.pal(9,"
 plot.mu <- ggplot(fit.df[which(fit.df$param=="mu"),], aes(x=cdd_seas, y=value, colour=species, group=species)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
   theme_classic() +  #geom_line() +
   facet_grid(~elev.lab, drop=TRUE, scales="free") +
-  xlab("")+ylab("peak of abundance distribution (day)")+scale_color_manual(values=cols)+ theme(legend.text = element_text(face = "italic")) #+ theme(legend.position="none")
+  xlab("")+ylab("peak of abundance distribution (day)")+
+  scale_color_viridis_d()+ theme(legend.text = element_text(face = "italic")) #+ theme(legend.position="none")
 
 plot.sig <- ggplot(fit.df[which(fit.df$param=="sig"),], aes(x=cdd_seas, y=log(value), colour=species, group=species)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
   theme_classic() +  #geom_line() +
   facet_grid(~elev.lab, drop=TRUE, scales="free") +
-  xlab("")+ylab("log(breadth of abundance distribution) (days)")+scale_color_manual(values=cols)+ theme(legend.text = element_text(face = "italic"))
+  xlab("")+ylab("log(breadth of abundance distribution) (days)")+
+  scale_color_viridis_d()+ theme(legend.text = element_text(face = "italic"))
 
 plot.scale <- ggplot(fit.df[which(fit.df$param=="scale"),], aes(x=cdd_seas, y=log(value), colour=species, group=species)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
   theme_classic() +  #geom_line() +
   facet_grid(~elev.lab, drop=TRUE, scales="free") +
-  xlab("seasonal growing degree days (C)")+ylab("log(scale of abundance distribution) (individuals)")+scale_color_manual(values=cols)+ theme(legend.text = element_text(face = "italic"))
+  xlab("seasonal growing degree days (C)")+ylab("log(scale of abundance distribution) (individuals)")+
+  scale_color_viridis_d()+ theme(legend.text = element_text(face = "italic"))
 
 pdf("Fig2_PhenFits.pdf", height = 10, width = 8)
 grid_arrange_shared_legend(plot.mu, plot.sig, plot.scale, ncol = 1, nrow = 3, position='right')
@@ -312,7 +316,7 @@ md= dredge(mod1)
 #or as a 95\% confidence set:
 ma= model.avg(md, cumsum(weight) <= .99) #with adding any models with delta AIC<2
 #for param.sig
-ma= model.avg(md, cumsum(weight) <= .996)
+#ma= model.avg(md, cumsum(weight) <= .996)
 
 #The 'subset' (or 'conditional') average only averages over the models where the parameter appears
 summary(ma)
@@ -332,7 +336,6 @@ anova(mod1)
 
 #marginal R squared values are those associated with your fixed effects, the conditional ones are those of your fixed effects plus the random effects
 r.squaredGLMM(mod1)
-
 
 #r.squaredGLMM(mod.mu) 
 
@@ -884,10 +887,29 @@ mod1=lm(value~ cdd+sp1_timing+sp2_timing+factor(elevation)+
           sp1_timing:sp2_timing+sp1_timing:factor(elevation)+ sp2_timing:factor(elevation), data=po.tim2, na.action = "na.fail")
 
 md= dredge(mod1)
+
+# ma=model.avg(md, subset = delta < 3)
 #or as a 95\% confidence set:
 ma= model.avg(md, cumsum(weight) <= .99)
 #The 'subset' (or 'conditional') average only averages over the models where the parameter appears
 summary(ma)
+
+#marginal R squared values are those associated with your fixed effects, the conditional ones are those of your fixed effects plus the random effects
+#r2 of top model
+r.squaredGLMM(get.models(md, subset = 1)[[1]])
+
+#save output
+coef2= summary(ma)$coefmat.subset
+coef7= summary(ma)$coefmat.subset
+coef9= summary(ma)$coefmat.subset
+
+coef.m= merge(coef2, coef7, by.x="row.names",by.y=0, all=TRUE)
+row.names(coef.m)= coef.m$Row.names
+coef.m= coef.m[,-1]
+
+coef.m= merge(coef.m, coef9, by.x="row.names",by.y=0, all=TRUE)
+
+write.table(coef.m, "Table2stats_cat.csv", sep=",")
 
 #--------------------------
 #partial residual plot
@@ -903,20 +925,18 @@ my.prplot= function (g, i, xlabs)  #beautify plot
   invisible()
 }
 #--------------
+mod1= get.models(md, subset = 1)[[1]]
 
-xlabs= c("GDDs","focal species timing", "compared species timing", "elevation (m)", "GDDs:focal species timing", "GDDs:compared species timing", "GDDs:elevation (m)", "focal:compared species timing")
+xlabs= c("GDDs","elevation (m)","focal species timing", "compared species timing",  "GDDs:elevation")
 
-pdf("FigS4_OverlapPR.pdf",height = 10, width = 10)
+pdf("FigS4_OverlapPR.pdf",height = 8, width = 10)
 
-par(mfrow=c(3,3), cex=1.1, lwd=1, mar=c(3,2, 1, 1), mgp=c(1.3, 0.5, 0), oma=c(0,2,0,0), bty="l", cex.lab=1.2)
+par(mfrow=c(2,3), cex=1.1, lwd=1, mar=c(3,2, 1, 1), mgp=c(1.3, 0.5, 0), oma=c(0,2,0,0), bty="l", cex.lab=1.2)
 my.prplot(mod1, 1, xlabs)
 my.prplot(mod1, 2, xlabs)
 my.prplot(mod1, 3, xlabs)
 my.prplot(mod1, 4, xlabs)
 my.prplot(mod1, 5, xlabs)
-my.prplot(mod1, 6, xlabs)
-my.prplot(mod1, 7, xlabs)
-my.prplot(mod1, 8, xlabs)
 
 mtext("Partial residual of overlapping area (proportion)", side=2, line = -0.5, cex=1.3, outer=TRUE)
 
@@ -962,6 +982,7 @@ dev.off()
 #----
 #STATS *****
 po.comm$elevation= as.numeric(as.character(po.comm$elevation))
+#po.comm$elevation= as.factor(po.comm$elevation)
 
 mod1= lm(value~ cdd+ cdd:elevation, data=po.comm[which(po.comm$metric==2),])
 mod1= lm(value~ cdd+ cdd:elevation, data=po.comm[which(po.comm$metric==7),])
@@ -1004,8 +1025,8 @@ mu.var[mu.var$elev==2195,]
 
 #add parameter fits to po1
 po1$spsiteyear= paste(po1$sp1, po1$year, po1$site,  sep="_")
-po.sp.agg= aggregate(po1, list(po1$spsiteyear, po1$metric, po1$sp1),FUN=mean) 
-colnames(po.sp.agg)[1:3]<-c("spsiteyear","metric","sp1")
+po.sp.agg= aggregate(po1, list(po1$spsiteyear, po1$metric, po1$sp1, po1$elevation),FUN=mean) 
+colnames(po.sp.agg)[1:4]<-c("spsiteyear","metric","sp1","elevation")
 
 match1= match(po.sp.agg$spsiteyear, fit.df1$spsiteyear)
 is.matched= which(!is.na(match1))
@@ -1016,20 +1037,73 @@ po.sp.agg$scale=NA
 po.sp.agg[is.matched,"mu"]= fit.df1[match1[is.matched],"mu"]
 po.sp.agg[is.matched,"sig"]= fit.df1[match1[is.matched],"sig"]
 po.sp.agg[is.matched,"scale"]= fit.df1[match1[is.matched],"scale"]
+po.sp.agg[is.matched,"scale.sd"]= fit.df1[match1[is.matched],"scale.sd"]
 
-po.sp.agg1=na.omit(po.sp.agg[,c("spsiteyear","value","metric","sp1","cdd","scale")])
+po.sp.agg1=na.omit(po.sp.agg[,c("spsiteyear","value","metric","sp1","sp1_timing","cdd","scale","scale.sd","elevation")])
+po.sp.agg1$sp_site= paste(po.sp.agg1$sp1, po.sp.agg1$elevation  ,sep="_")
+po.sp.agg1$sp_site= paste(po.sp.agg1$sp1, po.sp.agg1$elevation  ,sep="_")
 
-mod.scale=lme(scale~ value*cdd, random=~1|spsiteyear, data=po.sp.agg1[po.sp.agg1$metric==2,])
-mod.scale=lme(scale~ value*cdd, random=~1|sp1, data=po.sp.agg1[po.sp.agg1$metric==7,])
-mod.scale=lme(scale~ value*cdd, random=~1|sp1, data=po.sp.agg1[po.sp.agg1$metric==9,])
-#metrics 2,7,9
-summary(mod.scale)
+#order species by timing
+po.sp.agg1$sp1= factor(po.sp.agg1$sp1, levels=timing.mat$species )
 
-plot(po.sp.agg1[po.sp.agg1$metric==2,"value"],po.sp.agg1[po.sp.agg1$metric==2,"scale"])
 #plot
-ggplot(data=po.sp.agg1[po.sp.agg1$metric==2,], aes(x=value, y = scale, color=cdd))+geom_point()+
-  facet_wrap(~sp1)+theme_bw()+geom_smooth(method="lm", se=FALSE)+scale_color_viridis_c()
-  
+plot5a<- ggplot(data=po.sp.agg1[po.sp.agg1$metric==2,], aes(x=value, y = log(scale), color=cdd))+geom_point()+
+  facet_wrap(~sp1)+theme_bw()+scale_color_viridis_c(name="seasonal growing degree days (C)")+
+  xlab("overlapping area (proportion)")+ylab("log(scale of abundance distribution) (individuals)")+
+  theme(legend.position="bottom")+ theme(strip.text = element_text(face = "italic")) + theme(legend.key.width=unit(2,"cm"))
+
+#models
+#metrics 2,7,9
+dat.scale= po.sp.agg1[po.sp.agg1$metric==2,]
+
+#mod.scale=lme(scale~ value*sp1_timing*elevation, random=~1|sp1, data=dat.scale)
+#one top model (weight=1) across all metrics
+mod.scale=lme(scale~ value*sp1_timing, random=~1|sp1, data=dat.scale)
+
+summary(mod.scale)
+#marginal R squared values are those associated with your fixed effects, the conditional ones are those of your fixed effects plus the random effects
+r.squaredGLMM(mod.scale)
+
+md= dredge(mod.scale)
+#or as a 95\% confidence set:
+ma= model.avg(md, cumsum(weight) <= .99) #with adding any models with delta AIC<2
+#models with delta.aicc < 3
+ma=model.avg(md, subset = delta < 4)
+
+#The 'subset' (or 'conditional') average only averages over the models where the parameter appears
+summary(ma)
+
+#-------
+#RMA analysis
+dat.scale= po.sp.agg1[po.sp.agg1$metric==9,]
+
+#rma model
+rma.mv(scale, scale.sd^2, mods = ~ value +sp1_timing +value:sp1_timing, data=dat.scale, method="REML", random = ~ 1 | sp1)
+
+#----------------------
+#plots
+
+#devtools::install_github("hohenstein/remef")
+library(remef)
+
+model=lmer(scale~ value*sp1_timing+(1|sp1), REML=TRUE, data=dat.scale)
+
+y_partial <- remef(model, fix = c("sp1_timing"), ran = "all")
+plot(dat.scale$value, y_partial)
+dat.scale$scale_partial<- y_partial
+y_partial <- remef(model, fix = c("value"), ran = "all")
+plot(dat.scale$sp1_timing, y_partial)
+
+#ggplot of value vs scale
+plot5b<- ggplot(data=dat.scale, aes(x=value, y = scale_partial))+geom_point(aes(color=factor(sp1_timing)))+
+  theme_bw()+scale_color_viridis_d(name="species' timing")+
+  xlab("overlapping area (proportion)")+ylab("partial log(scale of abundance distribution) (individuals)")+
+  theme(legend.position="bottom")+geom_smooth(method="lm", se=FALSE, color="black")
+
+#FIGURE 5
+pdf("Fig5_CommOverlap.pdf", height = 8, width = 10)
+plot_grid(plot5a, plot5b, nrow=1, labels=c("a.","b."), rel_widths = c(1,0.5), rel_heights = c(1,0.6))
+dev.off()
 
 #---------------------------
 # Interaction surface plot
