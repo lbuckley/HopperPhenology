@@ -133,7 +133,8 @@ setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/figures/"
 pdf("Fig1_distyear_byspec.pdf",height = 12, width = 12)
 ggplot(data=dat, aes(x=ordinal, y = DIp, group=spsiteyear, color=Cdd_siteave))+ 
   geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(species~elev.lab, scales="free")+
-  theme(strip.text.y = element_text(angle = 0))+ theme(legend.position="bottom", legend.key.width=unit(3,"cm"))+
+  theme_bw()+theme(strip.text.y = element_text(angle = 0))+ 
+  theme(legend.position="bottom", legend.key.width=unit(3,"cm"), axis.title=element_text(size=16))+
   scale_color_viridis_c()+
   #scale_color_gradientn(colours = c('blue', 'cadetblue', 'orange')) +
   xlab("ordinal date") +ylab("abundance")+ 
@@ -306,6 +307,19 @@ param.scale= na.omit(param.scale)
 mod1=lme(value~ cdd_seas +timing +elev + cdd_seas:timing + cdd_seas:elev  +timing:elev+ cdd_seas:timing:elev, random=~1|species, data=param.mu )
 mod1=lme(value~ cdd_seas +timing +elev + cdd_seas:timing + cdd_seas:elev  +timing:elev+ cdd_seas:timing:elev, random=~1|species, data=param.sig )
 mod1=lme(value~ cdd_seas +timing +elev + cdd_seas:timing + cdd_seas:elev  +timing:elev+ cdd_seas:timing:elev, random=~1|species, data=param.scale )
+
+#value +-sd
+param.mu$v.psd= param.mu$value-param.mu$mu.sd
+param.sig$v.psd= param.sig$value-param.sig$sig.sd
+param.scale$v.psd= param.scale$value-param.scale$scale.sd
+param.mu= na.omit(param.mu)
+param.sig= na.omit(param.sig)
+param.scale= na.omit(param.scale)
+  
+mod1=lme(v.psd~ cdd_seas +timing +elev + cdd_seas:timing + cdd_seas:elev  +timing:elev+ cdd_seas:timing:elev, random=~1|species, data=param.mu )
+mod1=lme(v.psd~ cdd_seas +timing +elev + cdd_seas:timing + cdd_seas:elev  +timing:elev+ cdd_seas:timing:elev, random=~1|species, data=param.sig )
+mod1=lme(v.psd~ cdd_seas +timing +elev + cdd_seas:timing + cdd_seas:elev  +timing:elev+ cdd_seas:timing:elev, random=~1|species, data=param.scale )
+
 
 #repeat with categorical elevation
 mod1=lme(value~ cdd_seas +timing +factor(elev) + cdd_seas:timing + cdd_seas:factor(elev)  +timing:factor(elev)+ cdd_seas:timing:factor(elev), random=~1|species, data=param.mu )
@@ -869,7 +883,8 @@ ggplot(data=po.tim[which(po.tim$metric==2),], aes(x=cdd, y = value, color=elev.l
   theme_bw()+geom_smooth(method="lm", se=FALSE)+facet_wrap(fst.lab~st.lab, drop=TRUE, scales="free_x")+
   scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
                      values=c("darkorange3", "darkorange", "cornflowerblue","blue3")) +
-  theme(legend.position="bottom")+ylab(metric.lab[1])+xlab("seasonal growing degree days (C)")+ 
+  theme(legend.position="bottom",axis.title=element_text(size=16))+
+  ylab(metric.lab[1])+xlab("seasonal growing degree days (C)")+ 
   guides(color=guide_legend(title="elevation (m)" ))
 dev.off()
 
@@ -1010,13 +1025,13 @@ mu.var= ddply(param.mu, c("site", "year","period","siteyear"), summarise,
                var = var(value, na.rm=TRUE), elev=elev[1], Cdd_siteave= Cdd_siteave[1], cdd_seas= cdd_seas[1], elev.lab= elev.lab[1])
 
 #plot
-ggplot(data=mu.var, aes(x=cdd_seas, y = var, color=elev.lab)) +geom_point(aes(size=2))+
-  theme_bw()+geom_smooth(method="lm", se=FALSE) +theme(legend.position="bottom") +ylab("variance in phenology peak")+xlab("seasonal growing degree days (C)")+
+ggplot(data=mu.var, aes(x=cdd_seas, y = var, color=elev.lab)) +geom_point()+
+  theme_bw()+theme(legend.position="bottom") +ylab("variance in phenology peak")+xlab("seasonal growing degree days (C)")+
   scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
                      values=c("darkorange3", "darkorange", "cornflowerblue","blue3"))+ 
   guides(color=guide_legend(title="elevation (m)" ))
 #variance depends on composition of species? Not comparable across elevations?
-
+#aes(size=1)
 mu.var[mu.var$elev==2195,]
 
 #---------------------------
@@ -1134,8 +1149,8 @@ p3d= ggplot(gdat) +
 focs= c("focal: nymphal diapausers","focal: early season","focal: late season")
 comps= c("compared: nymphal diapausers","compared: early season","compared: late season")
 
-foc.lab= c("nymphal diapausers:","early season:","late season:")
-comp.lab= c("nymphal diapausers","early season","late season")
+foc.lab= c("nymphal diapause:","early season:","late season:")
+comp.lab= c("nymphal diapause","early season","late season")
 
 #restrict to focal timing
 for(k in 1:6){
@@ -1157,8 +1172,8 @@ for(k in 1:6){
     geom_tile() + 
     coord_equal() +
     geom_contour(color = "white", alpha = 0.5) + 
-    scale_fill_distiller(palette="Spectral", na.value="white", name="overlapping area") +
-    theme_bw(base_size=12)+xlab("seasonal GDDs (°C)")+ylab("elevation (m)") +theme(legend.position="bottom")+
+    scale_fill_distiller(palette="Spectral", na.value="white", name="overlap") +
+    theme_bw(base_size=12)+xlab("seasonal GDDs (°C)")+ylab("elevation (m)") +theme(legend.position="bottom", legend.key.width=unit(1,"cm"))+
     ggtitle(lab)
   
   if(k==1) po.sub1<- sp
