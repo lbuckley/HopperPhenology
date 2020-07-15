@@ -896,10 +896,12 @@ po.tim2$elevation= as.numeric(as.character(po.tim2$elevation))
 mod1=lm(value~ cdd+sp1_timing+sp2_timing+elevation+
         cdd:sp1_timing+cdd:sp2_timing+cdd:elevation+
       sp1_timing:sp2_timing+sp1_timing:elevation+ sp2_timing:elevation, data=po.tim2, na.action = "na.fail")
-#elevation as factor
-mod1=lm(value~ cdd+sp1_timing+sp2_timing+factor(elevation)+
-          cdd:sp1_timing+cdd:sp2_timing+cdd:factor(elevation)+
-          sp1_timing:sp2_timing+sp1_timing:factor(elevation)+ sp2_timing:factor(elevation), data=po.tim2, na.action = "na.fail")
+#elevation as an ordered factor
+po.tim2$elev.ord= factor(po.tim2$elevation, ordered=TRUE, levels=c(1752, 2195, 2591, 3048) )
+
+mod1=lm(value~ cdd+sp1_timing+sp2_timing+elev.ord+
+          cdd:sp1_timing+cdd:sp2_timing+cdd:elev.ord+
+          sp1_timing:sp2_timing+sp1_timing:elev.ord+ sp2_timing:elev.ord, data=po.tim2, na.action = "na.fail")
 
 md= dredge(mod1)
 
