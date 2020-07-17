@@ -17,7 +17,7 @@ library(sjPlot)
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/data/")
 dat.all= read.csv("HopperData_Sept2019_forPhenOverlap.csv")
 
-#-----------------
+#Prepare data-----------------
 
 #LOAD SPECIES DATA
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/data/")
@@ -35,7 +35,7 @@ clim1= read.csv("Clim1Data.csv")
 
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/figures/")
 
-#------------------------------------
+#---
 #compare egg diapausers vs non
 dat.all$diapause="egg"
 dat.all$species= as.character(dat.all$species)
@@ -111,7 +111,7 @@ sum(dat$total)
 
 siteyro= paste(dat$siteyear, dat$ordinal, sep="_")
 length(unique(siteyro))
-#----
+#---
 # plot out densities
 #made season warmth a factor
 #make cdd_july index
@@ -136,7 +136,7 @@ dat$species= factor(dat$species, levels=timing.mat$species )
 
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/figures/")
 
-## FIGURE 1
+# FIGURE 1-------------------------
 #No normalization
 pdf("Fig1_distyear_byspec.pdf",height = 12, width = 12)
 ggplot(data=dat, aes(x=ordinal, y = DIp, group=spsiteyear, color=Cdd_siteave))+ 
@@ -149,7 +149,7 @@ ggplot(data=dat, aes(x=ordinal, y = DIp, group=spsiteyear, color=Cdd_siteave))+
    labs(color = "seasonal GDDs")+ theme(strip.text = element_text(face = "italic")) 
 dev.off()
 
-#========================================
+# FIGURE 2---------------------------
 #ABUNDANCE DISTRIBUTION ANALYSIS
 
 #for each species, site, year
@@ -217,55 +217,55 @@ figad <- ggplot(df.c, aes(x=cdd_seas, y=log(DIptot), colour=species, group=speci
   xlab("")+ylab("breadth of abundance distribution (day)")+
   scale_color_viridis_d()+ theme(legend.text = element_text(face = "italic")) #+ theme(legend.position="none")
 
-#----
+#---
 pdf("Fig2_AbundMet.pdf", height = 10, width = 8)
 grid_arrange_shared_legend(figaa, figab, figac, ncol = 1, nrow = 3, position='right')
 dev.off()
 
-#-----
-#STATS
+#FIGURE 2 STATS---------------------------------------
 
-#lme model 
+#lmer model 
 df.c$elev.ord= factor(df.c$elev, ordered=TRUE, levels=c(1752, 2195, 2591, 3048) )
 df.c$timing= factor(df.c$timing, ordered=TRUE, levels=c(1, 2, 3) )
 df.c$sp_site= paste(df.c$species, df.c$site, sep="_")
-
-mod1 <- lme(ord.p15 ~ cdd_seas +timing +elev.ord +cdd_seas:timing +cdd_seas:elev.ord, random=~1|species/year, data = df.c)
-mod1 <- lme(breadth ~ cdd_seas +timing +elev.ord +cdd_seas:timing +cdd_seas:elev.ord, random=~cdd_seas|sp_site, data = df.c)
-mod1 <- lme(DIptot ~ cdd_seas +timing +elev.ord +cdd_seas:timing +cdd_seas:elev.ord, random=~cdd_seas|sp_site, data = df.c)
-
-r2glmm::r2beta(mod1)
-anova(mod1)
-summary(mod1)
-coef(mod1)
-
-summary(mod1)$tTable
-
-#------
-#PLOT
-
+df.c$logDIptot= log(df.c$DIptot) #to improve distribution of residuals
 
 mo=lmer(ord.p15 ~ cdd_seas +timing +elev.ord +cdd_seas:timing +cdd_seas:elev.ord+(1|species:year), REML=TRUE, data=df.c)
-mo=lmer(breadth ~ cdd_seas +timing +elev.ord +cdd_seas:timing +cdd_seas:elev.ord+(1|species:year), REML=TRUE, data=df.c)
-mo=lmer(DIptot ~ cdd_seas +timing +elev.ord +cdd_seas:timing +cdd_seas:elev.ord+(1|species:year), REML=TRUE, data=df.c)
+mb=lmer(breadth ~ cdd_seas +timing +elev.ord +cdd_seas:timing +cdd_seas:elev.ord+(1|species:year), REML=TRUE, data=df.c)
+mt=lmer(logDIptot ~ cdd_seas +timing +elev.ord +cdd_seas:timing +cdd_seas:elev.ord+(1|species:year), REML=TRUE, data=df.c)
 
-anova(mo)
+mod1=m0
+anova(mod1)
+summary(mod1)
+r.squaredGLMM(mod1)
+coef(mod1)
 
-r.squaredGLMM(mo)
+#save coefficients
+mo.p=summary(mo)$coefficients
+mb.p=summary(mb)$coefficients
+mt.p=summary(mt)$coefficients
+mo.c= rbind(mo.p,mb.p,mt.p)  
+mo.c[,1:2]= signif(mo.c[,1:2],2)
+mo.c[,3]= round(mo.c[,3],0)
+mo.c[,4]= round(mo.c[,4],1)
+mo.c[,5]= signif(mo.c[,5],2)
 
-mo.plot=plot_model(mo, type="pred", pred.type = "re", show.data=TRUE)
-mb.plot=plot_model(mb, type="pred", pred.type = "re", show.data=TRUE)
-mt.plot=plot_model(mt, type="pred", pred.type = "re", show.data=TRUE)
+#save anova
+mo.a= rbind(anova(mo), anova(mb),anova(mt))
+mo.a[,c(1:2,5,)]
 
-pdf("Fig2_mods.pdf",height = 12, width = 12)
-plot_grid(c(mo.plot,mb.plot,mt.plot))
+#plots
+mo.p=plot_model(mo, type="pred",terms=c("cdd_seas","timing","elev.ord"), show.data=TRUE, title="",axis.title=c("seasonal growing degree days (C)","Ordinal date of 15th quantile"))
+mo.b=plot_model(mb, type="pred",terms=c("cdd_seas","timing","elev.ord"), show.data=TRUE, title="",axis.title=c("seasonal growing degree days (C)","Breadth of abundance distribution (days)"))
+mo.t=plot_model(mt, type="pred",terms=c("cdd_seas","timing","elev.ord"), show.data=TRUE, title="",axis.title=c("seasonal growing degree days (C)","Total number individuals"))
+
+pdf("Fig2_mods.pdf",height = 6, width = 8)
+par(mfrow=c(3,1))
+mo.p
+mo.b
+mo.t
+#plot_grid(c(mo.p,mo.b,mo.t))
 dev.off()
-
-#devtools::install_github("hohenstein/remef")
-# library(remef)
-# 
-#y_partial <- remef(model, fix = c("cdd_seas:timing.L", "cdd_seas:elev.ord.L"), ran = "all")
-#plot(df.c$cdd_seas, y_partial)
 
 #=================================================
 #Calculate overlap metrics

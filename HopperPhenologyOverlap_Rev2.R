@@ -1,13 +1,4 @@
-ggplot(data=dat, aes(x=ordinal, y = DIp, group=spsiteyear, color=Cdd_siteave))+ 
-  geom_smooth(method="loess", se=FALSE)+geom_point()+facet_grid(species~elev.lab, scales="free")+
-  theme_bw()+theme(strip.text.y = element_text(angle = 0))+ 
-  theme(legend.position="bottom", legend.key.width=unit(3,"cm"), axis.title=element_text(size=16))+
-  scale_color_viridis_c()+
-  #scale_color_gradientn(colours = c('blue', 'cadetblue', 'orange')) +
-  xlab("ordinal date") +ylab("abundance")+ 
-  labs(color = "seasonal GDDs")+ theme(strip.text = element_text(face = "italic"))
 
-#--------------------------
 
 #for each species, site, year
 #spline interpolation?
