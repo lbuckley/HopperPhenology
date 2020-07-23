@@ -234,9 +234,9 @@ mo=lmer(ord.p15 ~ cdd_seas +timing +elev.ord +cdd_seas:timing +cdd_seas:elev.ord
 mb=lmer(breadth ~ cdd_seas +timing +elev.ord +cdd_seas:timing +cdd_seas:elev.ord+(1|species:year), REML=TRUE, data=df.c)
 mt=lmer(logDIptot ~ cdd_seas +timing +elev.ord +cdd_seas:timing +cdd_seas:elev.ord+(1|species:year), REML=TRUE, data=df.c)
 
-mod1=m0
+mod1=mt
 anova(mod1)
-summary(mod1)
+summary(mod1)$coefficients
 r.squaredGLMM(mod1)
 coef(mod1)
 
@@ -252,7 +252,9 @@ mo.c[,5]= signif(mo.c[,5],2)
 
 #save anova
 mo.a= rbind(anova(mo), anova(mb),anova(mt))
-mo.a[,c(1:2,5,)]
+mo.a[,c(1:2,5)]=round( mo.a[,c(1:2,5)],1)
+mo.a[,4]=round( mo.a[,4],0)
+mo.a[,6]= round(mo.a[,6],2)
 
 #plots
 mo.p=plot_model(mo, type="pred",terms=c("cdd_seas","timing","elev.ord"), show.data=TRUE, title="",axis.title=c("seasonal growing degree days (C)","Ordinal date of 15th quantile"))
@@ -267,8 +269,7 @@ mo.t
 #plot_grid(c(mo.p,mo.b,mo.t))
 dev.off()
 
-#=================================================
-#Calculate overlap metrics
+#Calculate overlap metrics---------------------
 
 #try dropping species
 #dat= dat[-which(dat$species=="Melanoplus bivittatus"),]
@@ -389,7 +390,7 @@ for(year in 1:length(years)){
 #replace 0 values with NA
 po[po==0]=NA
 
-#-----------------------------------
+#---
 #PLOTS
 # PO: sp comb x years x sites
 
@@ -458,7 +459,7 @@ po1= po1[which(!is.na(po1$sp2_timing)),]
 #add elevation
 po1$elevation= as.factor(elevs[match(po1$site, sites)])
 
-#*********************************************
+#FIGURE 2 OVERLAP--------------------------
 #Plot overlap
 
 #assess significance
@@ -540,17 +541,52 @@ dev.off()
 
 #+ylab("Phenological overlap (days)")+xlab("Growing degree days")
 
-#------
-#STATS ACROSS SPECIES #*****
+#FIGURE 2 OVERLAP STATS--------------------------------------
+#STATS ACROSS SPECIES
 po2$elev.ord= factor(po2$elevation, ordered=TRUE, levels=c(1752, 2195, 2591, 3048) )
+po2$sp1_timing= factor(po2$sp1_timing, ordered=TRUE, levels=c(1,2,3) )
+po2$sp2_timing= factor(po2$sp1_timing, ordered=TRUE, levels=c(1,2,3) )
 
-mod1=lme(value~ cdd +cdd:elev.ord + cdd:sp1_timing +cdd:sp2_timing +
-           cdd:sp1_timing:sp2_timing, random=~cdd|sp1/sp2, data=po2)
+#drop symmetric cases
+spsort= t(apply(po2[,c("sp1","sp2")], MARGIN=1, FUN=sort))
+po2$sps= paste(spsort[,1],spsort[,2], sep="_")
+spbind= paste(spsort[,1],spsort[,2], po2$site, po2$year, sep="_")
+reps= duplicated(spbind)
+po3= po2[which(reps==FALSE),]
+#relabel
+po3[which(po3$sp1_sp2=="2_1"),"sp1_sp2"]="1_2"
+po3[which(po3$sp1_sp2=="2_3"),"sp1_sp2"]="3_2"
+po3[which(po3$sp1_sp2=="3_1"),"sp1_sp2"]="1_3"
+po3[which(po3$sp1_sp2=="3_2"),"sp1_sp2"]="2_3"
+#rename
+po3[which(po3$sp1_sp2=="1_1"),"sp1_sp2"]="nymphal_nymphal"
+po3[which(po3$sp1_sp2=="1_2"),"sp1_sp2"]="nymphal_early"
+po3[which(po3$sp1_sp2=="1_3"),"sp1_sp2"]="nymphal_late"
+po3[which(po3$sp1_sp2=="2_2"),"sp1_sp2"]="early_early"
+po3[which(po3$sp1_sp2=="2_3"),"sp1_sp2"]="early_late"
+po3[which(po3$sp1_sp2=="3_3"),"sp1_sp2"]="late_late"
+#arrange
+po3$sp1_sp2= factor(po3$sp1_sp2, levels=c("nymphal_nymphal", "nymphal_early", "nymphal_late", "early_early",
+                                          "early_late","late_late") )
 
-summary(mod1)
+#scale
+po3$cdd.scale= scale(po3$cdd)
+
+mod1=lmer(value ~ cdd +sp1_sp2+ elev.ord +
+            cdd:sp1_sp2 + cdd:elev.ord + elev.ord:sp1_sp2 +
+            (1|sps), REML=TRUE, data=po3)
+
 anova(mod1)
+summary(mod1)$coefficients
+r.squaredGLMM(mod1)
+coef(mod1)
 
-#-------------
+#plot
+overlap.plot=plot_model(mod1, type="pred",terms=c("cdd","elev.ord","sp1_sp2"), show.data=FALSE, 
+                        title="", legend.title = "elevation (m)",
+                        axis.title=c("seasonal growing degree days (C)","overlap"))
+
+#---
 #STATS
 
 #MAKE TIMING MAT
@@ -574,62 +610,9 @@ anova(mod1)
 # setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/data/")
 # #write.csv(timing.mat, "timingmat_2019.csv" )
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/figures/")
-#-------------------
+#---
 
-#pick species
-po2.sp= po2[which(po2$sp1==rownames(timing.mat)[7]),]
-po2.sp$timing= timing.mat$timing[match(po2.sp$sp2, rownames(timing.mat))]
-#drop species without timing
-po2.sp= na.omit(po2.sp[which(!is.na(po2.sp)),] )
-
-#make elevation numeric
-po2.sp$elevation= as.numeric(as.character(po2.sp$elevation))
-
-mod1=lme(value~ cdd + elevation + timing, random=~1|sp2, data=po2.sp)
-print(po2.sp$sp1[1] )
-summary(mod1)
-
-#===================================
-# STATS GROUP BY SPECIES
-po2= po1[which(po1$metric==4),] 
-
-mod1= lm(value~ cdd*elevation+sp2+sp1, data=po2)
-mod1= lm(value~ cdd*as.numeric(as.character(elevation))+sp, data=po2)
-
-#---------------
-#save overlap output in table
-
-overlaps.sp= matrix(NA, nrow=length(specs), ncol=3 )
-rownames(overlaps.sp)= specs
-
-#by focal species
-
-for(sp.k in 1:length(specs)){
-po3= subset(po2, po2$sp1==specs[sp.k] ) #subset(po2, po2$sp1==specs[sp.k] | po2$sp2==specs[sp.k])
-# #switch species order
-# p.temp= po3$sp1
-# inds= which(po3$sp2==specs[sp.k])
-# if(length(inds)>0){
-#  po3$sp1[inds]=specs[sp.k] 
-#  po3$sp2[inds]=po3$sp1[inds] 
-# }
-
-if(nrow(po3)>0) {
-
-po3$elevation= as.numeric(as.character(po3$elevation))
-
-#---------------
-#early vs late
-po3$timing<-"early"
-po3$timing[which(po3$sp2 %in% specs[c(1,4)])]<-"late"
-
-overlaps.sp[sp.k,]= tryCatch( summary(lme(value~ cdd_july+cdd_july:elevation+cdd_july:timing,random=~1|sp2 , data=po3))$tTable[2:4,5], error=function(err) rep(NA,3))
-#mod1= lme(value~ cdd_july+elevation+timing+cdd_july:elevation+cdd_july:timing,random=~1|sp2 , data=po3)
-} #end data check
-} #end species loop
-
-#======================
-#Average overlap across community
+#Average overlap across community-----------------------
 
 #drop species combinations with less that 4 years
 po1.counts= ddply(po1, c("site", "sp","elevation","elevspec","metric"), summarise, count=length(unique(year)) )
@@ -639,7 +622,7 @@ po1$elevspecmetric= paste(po1$elevspec, po1$metric , sep="")
 
 po1= po1[which(po1$elevspecmetric %in% unique(po1.keep$elevspecmetric)),]
 
-#-----------
+#---
 #AVERAGE
 #Average across seasonal timing
 po1$sp1_sp2= paste(po1$sp1_timing, po1$sp2_timing, sep="_")
@@ -661,8 +644,7 @@ po.comm= ddply(po1, c("site", "year","metric","period","siteyear"), summarise,
                value = mean(value, na.rm=TRUE), Tmean= Tmean[1], cdd=cdd[1],cdd_july=cdd_july[1],elevation=elevation[1], Cdd_siteave= Cdd_siteave[1])
 po.comm$elev.lab= paste(po.comm$elevation,"m",sep="")
 
-#------------
-#FIGURE : plot by seasonal timing
+#FIGURE : plot by seasonal timing-------------------------
 #How to color background: https://stackoverflow.com/questions/6750664/how-to-change-the-format-of-an-individual-facet-wrap-panel
 
 #timing * species
@@ -702,7 +684,7 @@ ggplot(data=po.st[which(po.st$metric==9),], aes(x=cdd, y = value, color=elev.lab
   theme(strip.text = element_text(face = "italic")) 
 dev.off()
 
-#-----
+#---
 po.tim$fst.lab= NA
 po.tim$fst.lab[po.tim$sp1_timing==1]<-"focal: nymphal diapausers"
 po.tim$fst.lab[po.tim$sp1_timing==2]<-"focal: early season"
@@ -715,7 +697,7 @@ po.tim$st.lab[po.tim$sp2_timing==3]<-"compared: late season"
 po.tim$fst.lab= factor(po.tim$fst.lab, levels=c("focal: nymphal diapausers","focal: early season","focal: late season") )
 po.tim$st.lab= factor(po.tim$st.lab, levels=c("compared: nymphal diapausers","compared: early season","compared: late season") )
 
-#FIG 3
+#FIG 3 COMMUNITY OVERLAP---------------------------
 pdf("Fig3_CommOverlap_bytiming.pdf", height = 10, width = 10)
 ggplot(data=po.tim[which(po.tim$metric==2),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(), size=2)+
   theme_bw()+geom_smooth(method="lm", se=FALSE)+facet_wrap(fst.lab~st.lab, drop=TRUE, scales="free_x")+
@@ -726,52 +708,35 @@ ggplot(data=po.tim[which(po.tim$metric==2),], aes(x=cdd, y = value, color=elev.l
   guides(color=guide_legend(title="elevation (m)" ))
 dev.off()
 
-#TABLE 2 STATS
+#TABLE 2 STATS--------------------------- 
 #STATS ACROSS SPECIES #***** #metrics 2,7,9
 po.tim2= na.omit(po.tim[which(po.tim$metric==9),])
 
 #elevation as an ordered factor
 po.tim2$elev.ord= factor(po.tim2$elevation, ordered=TRUE, levels=c(1752, 2195, 2591, 3048) )
 
-mod1=lm(value~ cdd+sp1_timing+sp2_timing+elev.ord+
-          cdd:sp1_timing+cdd:sp2_timing+cdd:elev.ord+
-          sp1_timing:sp2_timing+sp1_timing:elev.ord+ sp2_timing:elev.ord, data=po.tim2, na.action = "na.fail")
+#rename
+po.tim2[which(po.tim2$sp1_sp2=="1_1"),"sp1_sp2"]="nymphal_nymphal"
+po.tim2[which(po.tim2$sp1_sp2=="1_2"),"sp1_sp2"]="nymphal_early"
+po.tim2[which(po.tim2$sp1_sp2=="1_3"),"sp1_sp2"]="nymphal_late"
+po.tim2[which(po.tim2$sp1_sp2=="2_2"),"sp1_sp2"]="early_early"
+po.tim2[which(po.tim2$sp1_sp2=="2_3"),"sp1_sp2"]="early_late"
+po.tim2[which(po.tim2$sp1_sp2=="3_3"),"sp1_sp2"]="late_late"
+#arrange
+po.tim2$sp1_sp2= factor(po.tim2$sp1_sp2, levels=c("nymphal_nymphal", "nymphal_early", "nymphal_late", "early_early",
+                                          "early_late","late_late") )
+
+mod1=lm(value~ cdd+sp1_sp2+elev.ord+
+          cdd:sp1_sp2+cdd:elev.ord+sp1_sp2:elev.ord, data=po.tim2, na.action = "na.fail")
 
 #write.table(coef.m, "Table2stats_cat.csv", sep=",")
 
-#--------------------------
-#partial residual plot
-library(faraway)
+#plot
+overlap.plot=plot_model(mod1, type="pred",terms=c("cdd","elev.ord","sp1_sp2"), show.data=FALSE, 
+                        title="", legend.title = "elevation (m)",
+                        axis.title=c("seasonal growing degree days (C)","overlap"))
 
-my.prplot= function (g, i, xlabs)  #beautify plot
-{
-  xl <- xlabs[i]
-  yl <- paste("")
-  x <- model.matrix(g)[, i + 1]
-  plot(x, g$coeff[i + 1] * x + g$res, xlab = xl, ylab = yl, col=rgb(0.2,0.2, 0.2, 0.5),pch=16)        #@I played with different plot characters to get different plots. Not sold
-  abline(0, g$coeff[i + 1])
-  invisible()
-}
-#--------------
-prplot(mod1,5)
-
-xlabs= c("GDDs","elevation (m)","focal species timing", "compared species timing",  "GDDs:elevation")
-
-pdf("FigS4_OverlapPR.pdf",height = 8, width = 10)
-
-par(mfrow=c(2,3), cex=1.1, lwd=1, mar=c(3,2, 1, 1), mgp=c(1.3, 0.5, 0), oma=c(0,2,0,0), bty="l", cex.lab=1.2)
-my.prplot(mod1, 1, xlabs)
-my.prplot(mod1, 2, xlabs)
-my.prplot(mod1, 3, xlabs)
-my.prplot(mod1, 4, xlabs)
-my.prplot(mod1, 5, xlabs)
-
-mtext("Partial residual of overlapping area (proportion)", side=2, line = -0.5, cex=1.3, outer=TRUE)
-
-dev.off()
-
-#------------
-#FIGURE 4: plot accross community
+#FIGURE 4: plot across community--------------------------------------
 #by year
 #ggplot(data=po.comm[which(po.comm$metric==3),], aes(x=year, y = value, color=elevation))+geom_point(aes(shape=period, fill=period), size=2)+theme_bw()+geom_smooth(method="lm", se=FALSE)
 
@@ -807,8 +772,7 @@ pdf("Fig4_CommOverlap.pdf", height = 10, width = 6)
 plot_grid(plot.m2, plot.m7, plot.m9, nrow=3, labels=c("a.","b.","c."), label_x=0.1)
 dev.off()
 
-#----
-#STATS *****
+#FIGURE 4 STATS--------------------------------------
 po.comm$elev.ord= factor(po.comm$elevation, ordered=TRUE, levels=c(1752, 2195, 2591, 3048) )
 
 mod1= lm(value~ cdd+ cdd:elev.ord, data=po.comm[which(po.comm$metric==2),])
@@ -817,17 +781,15 @@ mod1= lm(value~ cdd+ cdd:elev.ord, data=po.comm[which(po.comm$metric==9),])
 summary(mod1)
 anova(mod1)
 
-prplot(mod1, 1)
-prplot(mod1, 2)
+#plot
+community.plot=plot_model(mod1, type="pred",terms=c("cdd","elev.ord"), show.data=TRUE, 
+                        title="", legend.title = "elevation (m)",
+                        axis.title=c("seasonal growing degree days (C)","overlap"))
 
 #single elevation
 mod1= lm(value~ cdd, data=po.comm[which(po.comm$metric==9 & po.comm$elevation==3048),])
 
-#library(faraway)
-prplot(mod1,1)
-prplot(mod1,2)
-
-#---------------------------
+#ABUNDANCE CONSEQUENCES OF OVERLAP-------------------------------
 #Check abundance consequences
 #is it possible to see whether species abundances decline at higher levels of overlap?
 
@@ -855,7 +817,7 @@ po.sp.agg1$sp_site= paste(po.sp.agg1$sp1, po.sp.agg1$elevation  ,sep="_")
 po.sp.agg1$sp_site= paste(po.sp.agg1$sp1, po.sp.agg1$elevation  ,sep="_")
 
 #order species by timing
-po.sp.agg1$sp1= factor(po.sp.agg1$sp1, levels=timing.mat$species )
+po.sp.agg1$sp1_timing= factor(po.sp.agg1$sp1, ordered=TRUE, levels=c(1,2,3)  )
 
 #plot
 plot5a<- ggplot(data=po.sp.agg1[po.sp.agg1$metric==2,], aes(x=value, y = log(maxDIp), color=cdd))+geom_point()+
@@ -864,18 +826,26 @@ plot5a<- ggplot(data=po.sp.agg1[po.sp.agg1$metric==2,], aes(x=value, y = log(max
   theme(legend.position="bottom")+ theme(strip.text = element_text(face = "italic")) + theme(legend.key.width=unit(2,"cm"))
 
 #models
+po.sp.agg1$logmaxDIp= log(po.sp.agg1$maxDIp)
+
 #metrics 2,7,9
 dat.scale= po.sp.agg1[po.sp.agg1$metric==2,]
 
 #mod.scale=lme(maxDIp~ value*sp1_timing*elevation, random=~1|sp1, data=dat.scale)
-mod.scale=lme(maxDIp~ value*sp1_timing, random=~1|sp1, data=dat.scale)
+mod.scale=lmer(logmaxDIp~ value*sp1_timing +(1|sp1), data=dat.scale)
+
+#plot
+overlap.plot=plot_model(mod.scale, type="pred",terms=c("cdd","elev.ord","sp1_sp2"), show.data=FALSE, 
+                        title="", legend.title = "elevation (m)",
+                        axis.title=c("seasonal growing degree days (C)","overlap"))
+
 
 summary(mod.scale)
 #marginal R squared values are those associated with your fixed effects, the conditional ones are those of your fixed effects plus the random effects
 r.squaredGLMM(mod.scale)
 anova(mod.scale)
 
-#----------------------
+#FIGURE 5: OVERLAP AND ABUNDANCE PLOT-----------------------------------
 #plots
 
 #devtools::install_github("hohenstein/remef")
@@ -900,8 +870,7 @@ pdf("Fig5_CommOverlap.pdf", height = 8, width = 10)
 plot_grid(plot5a, plot5b, nrow=1, labels=c("a.","b."), rel_widths = c(1,0.5), rel_heights = c(1,0.6))
 dev.off()
 
-#---------------------------
-# Interaction surface plot
+#Interaction surface plot-----------------------------------------------------
 
 library(akima)
 
@@ -925,7 +894,7 @@ p3d= ggplot(gdat) +
 #,trans = "log", breaks=c(1,2, 5,10,20)
 #+ylim(c(0,1500))+xlim(c(-2,23))
 
-#---------------------------
+#---
 focs= c("focal: nymphal diapausers","focal: early season","focal: late season")
 comps= c("compared: nymphal diapausers","compared: early season","compared: late season")
 
