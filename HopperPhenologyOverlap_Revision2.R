@@ -214,18 +214,18 @@ figac <- ggplot(df.c, aes(x=cdd_seas, y=breadth, colour=species, group=species))
 figad <- ggplot(df.c, aes(x=cdd_seas, y=log(DIptot), colour=species, group=species)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
   theme_classic() +  #geom_line() +
   facet_grid(~elev.lab, drop=TRUE, scales="free") +
-  xlab("")+ylab("breadth of abundance distribution (day)")+
+  xlab("")+ylab("total seasonal abundance")+
   scale_color_viridis_d()+ theme(legend.text = element_text(face = "italic")) #+ theme(legend.position="none")
 
 #---
 pdf("Fig2_AbundMet.pdf", height = 10, width = 8)
-grid_arrange_shared_legend(figaa, figab, figac, ncol = 1, nrow = 3, position='right')
+grid_arrange_shared_legend(figab, figac, figad, ncol = 1, nrow = 3, position='right')
 dev.off()
 
 #FIGURE 2 STATS---------------------------------------
 
 #lmer model 
-df.c$elev.ord= factor(df.c$elev, ordered=TRUE, levels=c(1752, 2195, 2591, 3048) )
+df.c$elev.ord= factor(df.c$elev.lab, ordered=FALSE, levels=c("1752m", "2195m", "2591m", "3048m") )
 df.c$timing= factor(df.c$timing, ordered=TRUE, levels=c(1, 2, 3) )
 df.c$sp_site= paste(df.c$species, df.c$site, sep="_")
 df.c$logDIptot= log(df.c$DIptot) #to improve distribution of residuals
@@ -530,6 +530,8 @@ po3$elev.ord= factor(po3$elevation, ordered=FALSE, levels=c(1752, 2195, 2591, 30
 po3$sp1_timing= factor(po3$sp1_timing, ordered=TRUE, levels=c(1,2,3) )
 po3$sp2_timing= factor(po3$sp1_timing, ordered=TRUE, levels=c(1,2,3) )
 
+options(contrasts=c("contr.sum","contr.poly"))
+
 mover.2=lmer(value ~ cdd +sp1_sp2+ elev.ord +
             cdd:sp1_sp2 + cdd:elev.ord + elev.ord:sp1_sp2 +
             (1|sps), REML=TRUE, data=po3[po3$metric==2,])
@@ -540,11 +542,12 @@ mover.9=lmer(value ~ cdd +sp1_sp2+ elev.ord +
                cdd:sp1_sp2 + cdd:elev.ord + elev.ord:sp1_sp2 +
                (1|sps), REML=TRUE, data=po3[po3$metric==9,])
 
-mod1= mover.9
+mod1= mover.2
 anova(mod1)
 summary(mod1)$coefficients
 r.squaredGLMM(mod1)
 coef(mod1)
+lmerTest(mod1)
 
 #save coefficients
 mo.2=summary(mover.2)$coefficients
@@ -565,9 +568,11 @@ mo.a[,6]= round(mo.a[,6],2)
 write.csv(mo.a, "table2anova.csv")
 
 #plot
+labs= c("overlapping area (proportion)", "days of overlap", "days difference in peak abundance" )
 overlap.plot=plot_model(mover.2, type="pred",terms=c("cdd","elev.ord","sp1_sp2"), show.data=FALSE, 
                         title="", legend.title = "elevation (m)",
-                        axis.title=c("seasonal growing degree days (C)","overlap"))
+                        axis.title=c("seasonal growing degree days (C)",labs[1]))
+
 
 pdf("SpOverlapMod2.pdf", height = 10, width = 10)
 overlap.plot
@@ -581,7 +586,7 @@ dev.off()
 # fits1= fits[,,3,1]
 # fits1= sort(rowMeans(fits1, na.rm=TRUE))
 # 
-# #Calcualte average timing
+# #Calculate average timing
 # #early vs late species
 # fits1= fits[,,2,1]
 # fits1= sort(rowMeans(fits1, na.rm=TRUE))
@@ -613,7 +618,7 @@ po.comm= ddply(po3, c("site", "year","metric","period","siteyear"), summarise,
 po.comm$elev.lab= paste(po.comm$elevation,"m",sep="")
 
 #FIG 3 COMMUNITY OVERLAP---------------------------
-pdf("Fig3_CommOverlap_bytiming.pdf", height = 10, width = 10)
+pdf("Fig3_CommOverlap_bytiming2.pdf", height = 10, width = 10)
 ggplot(data=po.tim[which(po.tim$metric==2),], aes(x=cdd, y = value, color=elev.lab))+geom_point(aes(), size=2)+
   theme_bw()+geom_smooth(method="lm", se=FALSE)+facet_wrap(~sp1_sp2, drop=TRUE, scales="free_x")+
   scale_color_manual(breaks = c("1752m", "2195m", "2591m","3048m"),
@@ -652,11 +657,11 @@ cowplot::plot_grid(plot.m2, plot.m7, plot.m9, nrow=3, labels=c("a.","b.","c."), 
 dev.off()
 
 #FIGURE 4 STATS--------------------------------------
-po.comm$elev.ord= factor(po.comm$elevation, ordered=TRUE, levels=c(1752, 2195, 2591, 3048) )
+po.comm$elev.ord= factor(po.comm$elevation, ordered=FALSE, levels=c(1752, 2195, 2591, 3048) )
 
-mod1= lm(value~ cdd+ cdd:elev.ord, data=po.comm[which(po.comm$metric==2),])
-mod1= lm(value~ cdd+ cdd:elev.ord, data=po.comm[which(po.comm$metric==7),])
-mod1= lm(value~ cdd+ cdd:elev.ord, data=po.comm[which(po.comm$metric==9),])
+mod1= lm(value~ cdd +elev.ord +cdd:elev.ord, data=po.comm[which(po.comm$metric==2),])
+mod1= lm(value~ cdd +elev.ord +cdd:elev.ord, data=po.comm[which(po.comm$metric==7),])
+mod1= lm(value~ cdd +elev.ord +cdd:elev.ord, data=po.comm[which(po.comm$metric==9),])
 summary(mod1)
 anova(mod1)
 
@@ -698,47 +703,37 @@ po.sp.agg1$sp_site= paste(po.sp.agg1$sp1, po.sp.agg1$elevation  ,sep="_")
 
 #order species by timing
 po.sp.agg1$sp1_timing= factor(po.sp.agg1$sp1_timing, ordered=TRUE, levels=c(1,2,3)  )
+#log metrics
+po.sp.agg1$logmaxDIp= log(po.sp.agg1$maxDIp)
+po.sp.agg1$logDIptot= log(po.sp.agg1$DIptot)
 
 #plot
-plot5a<- ggplot(data=po.sp.agg1[po.sp.agg1$metric==2,], aes(x=value, y = log(maxDIp), color=cdd))+geom_point()+
+plot5a<- ggplot(data=po.sp.agg1[po.sp.agg1$metric==2,], aes(x=value, y = logDIptot, color=cdd))+geom_point()+
   facet_wrap(~sp1)+theme_bw()+scale_color_viridis_c(name="seasonal growing degree days (C)")+
-  xlab("overlapping area (proportion)")+ylab("log(scale of abundance distribution) (individuals)")+
+  xlab(metric.lab[1])+ylab("log(total seasonal abundance) (individuals)")+
   theme(legend.position="bottom")+ theme(strip.text = element_text(face = "italic")) + theme(legend.key.width=unit(2,"cm"))
 
 #models
-po.sp.agg1$logmaxDIp= log(po.sp.agg1$maxDIp)
-
 #metrics 2,7,9
 dat.scale= po.sp.agg1[po.sp.agg1$metric==2,]
 
 #mod.scale=lme(maxDIp~ value*sp1_timing*elevation, random=~1|sp1, data=dat.scale)
-mod.scale=lmer(logmaxDIp~ value*sp1_timing +(1|sp1), data=dat.scale)
-
-#plot
-plot5b=plot_model(mod.scale, type="pred",terms=c("value","sp1_timing"), show.data=TRUE, 
-                        title="", legend.title = "species' timing",
-                        axis.title=c("overlapping area (proportion","log(scale of abundance distribution)"))
+mod.scale=lmer(logDIptot~ value*sp1_timing +(1|sp1), data=dat.scale)
 
 summary(mod.scale)
 #marginal R squared values are those associated with your fixed effects, the conditional ones are those of your fixed effects plus the random effects
 r.squaredGLMM(mod.scale)
 anova(mod.scale)
 
-#FIGURE 5: OVERLAP AND ABUNDANCE PLOT-----------------------------------
-#plots
+#plot
+set_theme(
+  base = theme_bw(), 
+  legend.inside = TRUE,         # legend inside plot
+  legend.pos = "bottom")  # legend position inside plot
 
-#devtools::install_github("hohenstein/remef")
-library(remef)
-
-y_partial <- remef(mod.scale, fix = c("sp1_timing.L","sp1_timing.Q"), ran = "all")
-plot(dat.scale$value, y_partial)
-dat.scale$scale_partial<- y_partial
-
-#ggplot of value vs scale
-#plot5b<- ggplot(data=dat.scale, aes(x=value, y = scale_partial))+geom_point(aes(color=factor(sp1_timing)))+
-  theme_bw()+scale_color_viridis_d(name="species' timing")+
-  xlab("overlapping area (proportion)")+ylab("partial log(scale of abundance distribution) (individuals)")+
-  theme(legend.position="bottom")+geom_smooth(method="lm", se=FALSE, color="black")
+plot5b=plot_model(mod.scale, type="pred",terms=c("value","sp1_timing"), show.data=TRUE, 
+                        title="", legend.title = "species' timing",
+                        axis.title=c(metric.lab[1],"log(total seasonal abundance)") )
 
 #FIGURE 5
 pdf("Fig5_CommOverlap.pdf", height = 8, width = 10)
