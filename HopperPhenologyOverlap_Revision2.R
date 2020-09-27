@@ -12,6 +12,7 @@ library(ggplot2)
 library(tidyverse)
 library(r2glmm)
 library(sjPlot)
+library(lmerTest)
 
 ## DATA WITH ALL NYMPHS
 setwd("/Volumes/GoogleDrive/My Drive/Buckley/Work/GrasshopperPhenSynch/data/")
@@ -234,7 +235,7 @@ mo=lmer(ord.p15 ~ cdd_seas +timing +elev.ord +cdd_seas:timing +cdd_seas:elev.ord
 mb=lmer(breadth ~ cdd_seas +timing +elev.ord +cdd_seas:timing +cdd_seas:elev.ord+(1|species:year), REML=TRUE, data=df.c)
 mt=lmer(logDIptot ~ cdd_seas +timing +elev.ord +cdd_seas:timing +cdd_seas:elev.ord+(1|species:year), REML=TRUE, data=df.c)
 
-mod1=mt
+mod1=mo
 anova(mod1)
 summary(mod1)$coefficients
 r.squaredGLMM(mod1)
@@ -542,7 +543,7 @@ mover.9=lmer(value ~ cdd +sp1_sp2+ elev.ord +
                cdd:sp1_sp2 + cdd:elev.ord + elev.ord:sp1_sp2 +
                (1|sps), REML=TRUE, data=po3[po3$metric==9,])
 
-mod1= mover.2
+mod1= mover.7
 anova(mod1)
 summary(mod1)$coefficients
 r.squaredGLMM(mod1)
@@ -657,16 +658,31 @@ cowplot::plot_grid(plot.m2, plot.m7, plot.m9, nrow=3, labels=c("a.","b.","c."), 
 dev.off()
 
 #FIGURE 4 STATS--------------------------------------
+library(car)
 po.comm$elev.ord= factor(po.comm$elevation, ordered=FALSE, levels=c(1752, 2195, 2591, 3048) )
 
-mod1= lm(value~ cdd +elev.ord +cdd:elev.ord, data=po.comm[which(po.comm$metric==2),])
-mod1= lm(value~ cdd +elev.ord +cdd:elev.ord, data=po.comm[which(po.comm$metric==7),])
-mod1= lm(value~ cdd +elev.ord +cdd:elev.ord, data=po.comm[which(po.comm$metric==9),])
-summary(mod1)
-anova(mod1)
+mco.2= lm(value~ cdd +elevation +cdd:elevation, data=po.comm[which(po.comm$metric==2),])
+
+
+mco.2= lm(value~ cdd +elev.ord +cdd:elev.ord, data=po.comm[which(po.comm$metric==2),])
+mco.7= lm(value~ cdd +elev.ord +cdd:elev.ord, data=po.comm[which(po.comm$metric==7),])
+mco.9= lm(value~ cdd +elev.ord +cdd:elev.ord, data=po.comm[which(po.comm$metric==9),])
+anova(mco.7)
+summary(mco.7)
+Anova(mco.9, type="II")   # Type II tests
+
+#save coefficients
+mo.2=summary(mco.2)$coefficients
+mo.7=summary(mco.7)$coefficients
+mo.9=summary(mco.9)$coefficients
+mo.c= rbind(mo.2,mo.7, mo.9)  
+mo.c[,1:2]= signif(mo.c[,1:2],2)
+mo.c[,3]= round(mo.c[,3],1)
+mo.c[,4]= signif(mo.c[,4],2)
+write.csv(mo.c, "table3coef.csv")
 
 #plot
-community.plot=plot_model(mod1, type="pred",terms=c("cdd","elev.ord"), show.data=TRUE, 
+community.plot=plot_model(mco.9, type="pred",terms=c("cdd","elev.ord"), show.data=TRUE, 
                         title="", legend.title = "elevation (m)",
                         axis.title=c("seasonal growing degree days (C)","overlap"))
 
