@@ -215,7 +215,7 @@ figac <- ggplot(df.c, aes(x=cdd_seas, y=breadth, colour=species, group=species))
 figad <- ggplot(df.c, aes(x=cdd_seas, y=log(DIptot), colour=species, group=species)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
   theme_classic() +  #geom_line() +
   facet_grid(~elev.lab, drop=TRUE, scales="free") +
-  xlab("")+ylab("total seasonal abundance")+
+  xlab("seasonal GDDs (°C) ")+ylab("log total seasonal abundance")+
   scale_color_viridis_d()+ theme(legend.text = element_text(face = "italic")) #+ theme(legend.position="none")
 
 #---
