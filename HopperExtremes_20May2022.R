@@ -29,8 +29,14 @@ timing.mat= timing.mat[order(timing.mat$timing, timing.mat$species),]
 
 #-------------
 #climate data
-clim1= read.csv("Clim1Data.csv")
+setwd("/Volumes/GoogleDrive/My Drive/AlexanderResurvey/DataForAnalysis/climate/")
+#read annual precipitation and snow data (not site specific)
+clim.ann= read.csv("AlexanderYearlyClimate.csv")
 
+#read data for all sites
+clim= read.csv("AlexanderClimateAll_filled_May2022.csv")
+#yearly data
+clim.ave= aggregate(clim, by=list(clim$Year, clim$Site), FUN="mean", na.rm=TRUE)
 
 #------------------------------------
 #compare egg diapausers vs non
@@ -115,7 +121,7 @@ fitG =
 #fit= fitG(temp,y,mu=200, sig=1, scale=1)
 
 #data storage
-fits= array(data=NA, dim=c(length(specs), length(years), length(sites),6), list(specs,years,sites,c("mu","sig","scale","mu.sd","sig.sd","scale.sd")) )
+fits= array(data=NA, dim=c(length(specs), length(years), length(sites),7), list(specs,years,sites,c("mu","sig","scale","mu.sd","sig.sd","scale.sd","abund")) )
 
 colors= rainbow(9)
 
@@ -146,6 +152,9 @@ for(site in 1:length(sites)){
       if(year.ind>1) points(dat.sub2$ordinal, dat.sub2$DIp, type="p", col= colors[year.ind])
       #plot fit
       lines(dat.sub2$ordinal,p[3]*dnorm(dat.sub2$ordinal,p[1],p[2]), col= colors[year.ind])
+      
+      #add abundance
+      fits[spec.ind, year.ind, site, 7]= dat.sub2$AdultSum[1]
       }
     }
   }
@@ -177,6 +186,7 @@ dat$siteyear= paste(dat$site, dat$year, sep="")
 match1= match(fit.df$siteyear, dat$siteyear)
 fit.df$Cdd_siteave= dat$Cdd_siteave[match1]
 fit.df$cdd_seas= dat$cdd_seas[match1]
+fit.df$Tmean= dat$Tmean[match1]
 
 #add seasonal timing (calculated below)
 fit.df$timing= timing.mat$timing[match(fit.df$species, timing.mat$species)]
@@ -189,13 +199,31 @@ fit.df$species= factor(fit.df$species, levels=timing.mat$species )
 #add elevation label
 fit.df$elev.lab= paste(fit.df$elev, "m", sep="")
 
+#add annual snow and precip data
+match1= match(fit.df$year, clim.ann$Year)
+fit.bind= clim.ann[match1, c("pre","snow","SpringPre","SummerPre","SpringSnow")]
+fit.df= cbind(fit.df, fit.bind)
+
+#add extremes
+exts= rbind( cbind(rep("CHA", nrow(clim.ann)), clim.ann$Year, clim.ann$CHA_tx90, clim.ann$CHA_wsdi),
+  cbind(rep("A1", nrow(clim.ann)), clim.ann$Year, clim.ann$A1_tx90, clim.ann$A1_wsdi),
+  cbind(rep("B1", nrow(clim.ann)), clim.ann$Year, clim.ann$B1_tx90, clim.ann$B1_wsdi),
+  cbind(rep("C1", nrow(clim.ann)), clim.ann$Year, clim.ann$C1_tx90, clim.ann$C1_wsdi) )
+exts= as.data.frame(exts)
+colnames(exts)=c("Site","Year","Tx90","WSDI")
+exts$SiteYr= paste(exts$Site, exts$Year, sep="")
+
+match1= match(fit.df$siteyear, exts$SiteYr)
+fit.df$Tx90= as.numeric(exts$Tx90[match1])
+fit.df$WSDI= as.numeric(exts$WSDI[match1])
+
 #cast
 rownames(fit.df) <- c()
-fit.df1 <- dcast(fit.df, species + year + site + Cdd_siteave ~ param, value.var="value")
+fit.df1 <- dcast(fit.df, species + year + site + Cdd_siteave +Tmean ~ param, value.var="value")
 fit.df1$spsiteyear= paste(fit.df1$species,fit.df1$year, fit.df1$site, sep="_")
 
 #--------------------
-# FIGURE 2
+# Compare environmental metrics to fits
 
 fit.df$param.lab="peak of abundance distribution"
 fit.df$param.lab[which(fit.df$param=="sig")]= "breadth of abundance distribution"
@@ -207,41 +235,24 @@ levels(fit.df$species)
 cols= c(brewer.pal(4,"Blues")[2:4],  brewer.pal(5,"Greens")[4:5], brewer.pal(9,"YlOrRd") )
 #image(1:14,1,as.matrix(1:14),col=cols)
 
-# ggplot(fit.df[which(fit.df$param=="mu"),], aes(x=cdd_seas, y=value, colour=as.factor(timing), group=species)) +
-#   geom_line() + theme_classic() +
-#   facet_grid(~elev.lab, drop=TRUE, scales="free") +
-#   xlab("")+ylab("peak of abundance distribution")
+fit.df$elev= factor(fit.df$elev)
 
-#DROP shape=period
+#predictors
+#year, pre, snow, Tmean, cdd_seas, SpringPre, SummerPre, SpringSnow, Tx90, WSDI
 
-plot.mu <- ggplot(fit.df[which(fit.df$param=="mu"),], aes(x=cdd_seas, y=value, colour=species, group=species)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
+ggplot(fit.df[which(fit.df$param %in%c("mu","sig","scale","abund") & fit.df$species=="Melanoplus boulderensis"),], 
+       aes(x=Tx90, y=value, colour=elev, group=elev)) + 
+  geom_line()+
+  #geom_point()+geom_smooth(method="lm", se=FALSE)+
   theme_classic() +  #geom_line() +
-  facet_grid(~elev.lab, drop=TRUE, scales="free") +
+  facet_grid(param~1, drop=TRUE, scales="free") +
   xlab("")+ylab("peak of abundance distribution (day)")+
   scale_color_viridis_d()+ theme(legend.text = element_text(face = "italic")) #+ theme(legend.position="none")
 
-plot.sig <- ggplot(fit.df[which(fit.df$param=="sig"),], aes(x=cdd_seas, y=log(value), colour=species, group=species)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
-  theme_classic() +  #geom_line() +
-  facet_grid(~elev.lab, drop=TRUE, scales="free") +
-  xlab("")+ylab("log(breadth of abundance distribution) (days)")+
-  scale_color_viridis_d()+ theme(legend.text = element_text(face = "italic"))
+#low Tx90: early and abundance 
 
-plot.scale <- ggplot(fit.df[which(fit.df$param=="scale"),], aes(x=cdd_seas, y=log(value), colour=species, group=species)) + geom_point()+geom_smooth(method="lm", se=FALSE)+
-  theme_classic() +  #geom_line() +
-  facet_grid(~elev.lab, drop=TRUE, scales="free") +
-  xlab("seasonal growing degree days (C)")+ylab("log(scale of abundance distribution) (individuals)")+
-  scale_color_viridis_d()+ theme(legend.text = element_text(face = "italic"))
 
-pdf("Fig2_PhenFits.pdf", height = 10, width = 8)
-grid_arrange_shared_legend(plot.mu, plot.sig, plot.scale, ncol = 1, nrow = 3, position='right')
-#plot_grid(plot.mu, plot.scale, nrow=2, rel_heights=c(1,1.4) )
-dev.off()
-
-#---------------------
-# Add climate data to phenology data
-
-fit.df1$site_yr= paste(fit.df1$site, fit.df1$year, sep="_")
-
-#add clim.ave
-#c1 for now
-
+#pdf("Fig2_PhenFits.pdf", height = 10, width = 8)
+#grid_arrange_shared_legend(plot.mu, plot.sig, plot.scale, ncol = 1, nrow = 3, position='right')
+##plot_grid(plot.mu, plot.scale, nrow=2, rel_heights=c(1,1.4) )
+#dev.off()

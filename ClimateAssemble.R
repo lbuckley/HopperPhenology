@@ -350,7 +350,7 @@ clim[which(clim$Julian<(224-30) | clim$Julian>(224+30) ),"dd_ms"]<-0
 #=========================
 #WRITE OUT
 setwd( paste(fdir, "climate", sep="") )   
-write.csv(clim,"AlexanderClimateAll_filled_May2018.csv")
+write.csv(clim,"AlexanderClimateAll_filled_May2022.csv")
 
 #--------------------------
 #CHECK DATA
